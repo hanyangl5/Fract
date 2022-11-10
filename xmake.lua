@@ -1,0 +1,22 @@
+
+-- -- add_requires("vcpkg::directx-dxc")
+-- add_requires("vcpkg::d3d12-memory-allocator")
+-- -- add_requires("vcpkg::directxmath")
+-- -- add_requires("vcpkg::directxtk12")
+-- -- add_requires("vcpkg::assimp")
+-- add_requires("vcpkg::glfw3")
+
+target("ori") 
+    set_kind("static") 
+    add_files("ori/camera/*.cpp")
+    add_files("ori/geometry/*.cpp")
+    add_files("ori/light/*.cpp")
+    add_files("ori/materials/*.cpp")
+    add_files("ori/ray/*.cpp")
+    add_files("ori/rhi/*.cpp")
+    add_files("ori/sampling/*.cpp")
+
+target("ori_render")
+    set_kind("binary") 
+    add_files("ori_render/ori_render.cpp")
+    add_deps("ori")
