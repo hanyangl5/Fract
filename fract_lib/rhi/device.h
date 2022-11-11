@@ -19,7 +19,7 @@
 #include <utils/window/Window.h>
 #include "rhi_utils.h"
 
-namespace Ori {
+namespace Fract {
 
 struct RendererContext {
     ID3D12Device *device;
@@ -339,4 +339,4 @@ class Device {
     DescriptorSetAllocator *descriptor_set_allocator{};
 };
 
-} // namespace Ori
+} // namespace Fract

@@ -1,14 +1,14 @@
 #include <rhi/device.h>
 #include <utils/window/Window.h>
 
-using namespace Ori;
+using namespace Fract;
 int main() {
 
     Memory::initialize();
 
-    Ori::Device device;
+    Fract::Device device;
     device.Initialize();
-    Ori::Window *window = new Ori::Window("ori", 1280, 800);
+    Fract::Window *window = new Fract::Window("fract", 1280, 800);
     SwapChain *swap_chain =
         device.CreateSwapChain(SwapChainCreateInfo{2}, window);
     

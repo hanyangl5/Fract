@@ -13,7 +13,7 @@
 #include "../utils/defination.h"
 #include "../utils/log/log.h"
 
-namespace Ori {
+namespace Fract {
 // definations
 
 // descriptor set
@@ -574,17 +574,17 @@ struct IndirectDrawCommand {
 
 inline D3D12_COMMAND_LIST_TYPE to_dx_command_list_type(CommandQueueType type) {
     switch (type) {
-    case Ori::GRAPHICS:
+    case Fract::GRAPHICS:
         return D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT;
         break;
-    case Ori::COMPUTE:
+    case Fract::COMPUTE:
         return D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_COMPUTE;
         break;
-    case Ori::TRANSFER:
+    case Fract::TRANSFER:
         return D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_COPY;
         break;
     default:
         break;
     }
 }
-} // namespace Ori
+} // namespace Fract

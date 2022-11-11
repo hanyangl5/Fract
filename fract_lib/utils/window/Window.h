@@ -25,7 +25,7 @@
 
 #include "../defination.h"
 
-namespace Ori {
+namespace Fract {
 
 class Window {
   public:
@@ -56,4 +56,4 @@ class Window {
     bool m_vsync_enabled{false};
 };
 
-} // namespace Horizon
+} // namespace Fract

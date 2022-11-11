@@ -8,7 +8,7 @@
 
 #include "Memory.h"
 
-namespace Ori::Memory {
+namespace Fract::Memory {
 
 std::pmr::memory_resource *global_memory_resource;
 
@@ -22,4 +22,4 @@ void destroy() {
     delete global_memory_resource; 
 }
 
-} // namespace Horizon::Memory
+} // namespace Fract::Memory

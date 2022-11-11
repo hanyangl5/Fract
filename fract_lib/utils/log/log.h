@@ -14,7 +14,7 @@
 #include "../singleton/public_singleton.h"
 #include "../container/Container.h"
 
-namespace Ori {
+namespace Fract {
 
 inline Container::String HrToString(HRESULT hr) {
     char s_str[64] = {};
@@ -68,4 +68,4 @@ class Log : public PublicSingleton<Log> {
 
 #define CHECK_DX_RESULT(res) Log::GetInstance().CheckDXResult(res, __FUNCTION__, __LINE__);
 
-} // namespace Horizon
+} // namespace Fract

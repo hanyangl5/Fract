@@ -18,7 +18,7 @@
 
 #include "../memory/Memory.h"
 
-namespace Ori::Container {
+namespace Fract::Container {
 
 using String = std::pmr::string;
 template <typename T, size_t size> using FixedArray = std::array<T, size>;
@@ -28,4 +28,4 @@ template <typename T> using HashSet = std::pmr::unordered_set<T>;
 template <typename Key, typename Val> using Map = std::pmr::map<Key, Val>;
 template <typename Key, typename Val> using HashMap = std::pmr::unordered_map<Key, Val>;
 
-} // namespace Horizon::Container
+} // namespace Fract::Container

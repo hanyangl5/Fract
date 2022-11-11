@@ -12,7 +12,7 @@
 
 #include <utils/log/log.h>
 
-namespace Ori {
+namespace Fract {
 
 thread_local CommandContext *thread_command_context;
 
@@ -324,4 +324,4 @@ void CommandList::BindPipeline(Pipeline *pipeline) {
     gpu_command_list->SetPipelineState(pipeline->gpu_pipeline);
 }
 
-} // namespace Ori
+} // namespace Fract

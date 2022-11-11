@@ -12,7 +12,7 @@
 
 #include "../math/Math.h"
 
-namespace Ori::Input {
+namespace Fract::Input {
 
 enum class Key { ESCAPE, SPACE, KEY_W, KEY_S, KEY_A, KEY_D, KEY_LCTRL, KEY_LSHIFT };
 
@@ -59,4 +59,4 @@ int GetMouseButtonRelease(Window *window, MouseButton button);
 //float Input::GetMouseX() { return GetMousePosition().x; }
 //
 //float Input::GetMouseY() { return GetMousePosition().y; }
-} // namespace Horizon
+} // namespace Fract

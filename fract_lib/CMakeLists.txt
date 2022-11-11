@@ -1,4 +1,4 @@
-project(ori)
+project(fract_lib)
 
 file(GLOB_RECURSE HEADER_FILES "*.h")
 file(GLOB_RECURSE SOURCE_FILES "*.cpp" "*.c")
@@ -6,11 +6,11 @@ file(GLOB_RECURSE SOURCE_FILES "*.cpp" "*.c")
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${HEADER_FILES} ${SOURCE_FILES})
 
 add_library(${PROJECT_NAME} ${HEADER_FILES} ${SOURCE_FILES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/ori)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/fract_lib)
 
 #target_link_libraries(${PROJECT_NAME} PUBLIC third_party)
 
-set_property(TARGET ${PROJECT_NAME} PROPERTY FOLDER "ori")
+set_property(TARGET ${PROJECT_NAME} PROPERTY FOLDER "fract_lib")
 
 # glfw
 find_package(glfw3 REQUIRED)

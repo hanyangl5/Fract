@@ -14,7 +14,7 @@
 
 #include "../defination.h"
 
-namespace Ori::Math {
+namespace Fract::Math {
 
 static constexpr f32 _PI = 3.141592654f;
 static constexpr f32 _2PI = 6.283185307f;
@@ -71,4 +71,4 @@ template <typename T> inline T Lerp(T a, T b, f32 t) {
 
 // TODO(hylu): provide math functions to replace std::xxx()
 
-} // namespace Horizon::Math
+} // namespace Fract::Math

@@ -10,7 +10,7 @@
 
 #include <type_traits>
 
-namespace Ori {
+namespace Fract {
 
 template <typename T> class PublicSingleton {
   protected:
@@ -26,4 +26,4 @@ template <typename T> class PublicSingleton {
     }
 };
 
-} // namespace Horizon
+} // namespace Fract

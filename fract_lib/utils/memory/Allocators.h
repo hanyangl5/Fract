@@ -15,7 +15,7 @@
 //#define MEMORY_RESOURCE_TRACKING
 #endif
 
-namespace Ori::Memory {
+namespace Fract::Memory {
 
 class GlobalMemoryAllocator : public std::pmr::memory_resource {
   public:
@@ -45,4 +45,4 @@ class LocalMemoryAllocator : public std::pmr::memory_resource {
     bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override;
 };
 
-} // namespace Horizon::Memory
+} // namespace Fract::Memory

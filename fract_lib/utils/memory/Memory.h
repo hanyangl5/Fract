@@ -15,7 +15,7 @@
 
 #include "Allocators.h"
 
-namespace Ori::Memory {
+namespace Fract::Memory {
 
 extern std::pmr::memory_resource *global_memory_resource;
 // extern std::pmr::memory_resource *local_memory_resource;
@@ -30,7 +30,7 @@ template <typename T, typename... Args> T *Alloc(std::pmr::memory_resource &allo
 }
 
 template <typename T, typename... Args> T *Alloc(Args &&...args) {
-    return Alloc<T, Args...>(*Ori::Memory::global_memory_resource, std::forward<Args>(args)...);
+    return Alloc<T, Args...>(*Fract::Memory::global_memory_resource, std::forward<Args>(args)...);
 }
 
 template <typename T> void Free(std::pmr::memory_resource &allocator, T *ptr) {
@@ -45,7 +45,7 @@ template <typename T> void Free(T *ptr) {
     if (!ptr) {
         return;
     }
-    Free(*Horizon::Memory::global_memory_resource, ptr);
+    Free(*Fract::Memory::global_memory_resource, ptr);
 }
 
 inline std::pmr::memory_resource *GetGlobalAllocator() {
@@ -69,7 +69,7 @@ _NODISCARD UniquePtr<T> MakeUnique(std::pmr::memory_resource &allocator, Args &&
 
 template <typename T, typename... Args, std::enable_if_t<!std::is_array_v<T>, int> = 0>
 _NODISCARD UniquePtr<T> MakeUnique(Args &&...args) { // make a unique_ptr
-    return Memory::MakeUnique<T, Args...>(*Horizon::Memory::global_memory_resource, std::forward<Args>(args)...);
+    return Memory::MakeUnique<T, Args...>(*Fract::Memory::global_memory_resource, std::forward<Args>(args)...);
 }
 
 // we prefer using Container::Array than using unique_ptr<T[]>
@@ -85,4 +85,4 @@ _NODISCARD UniquePtr<T> MakeUnique(Args &&...args) { // make a unique_ptr
 template <class T, class... Args, std::enable_if_t<std::extent_v<T> != 0, int> = 0>
 void MakeUnique(Args &&...) = delete;
 
-} // namespace Horizon::Memory
+} // namespace Fract::Memory

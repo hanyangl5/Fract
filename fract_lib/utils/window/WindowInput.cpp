@@ -8,7 +8,7 @@
 
 #include "WindowInput.h"
 
-namespace Ori::Input {
+namespace Fract::Input {
 
 static f32 last_x;
 static f32 last_y;
@@ -130,4 +130,4 @@ int GetMouseButtonRelease(Window *window, MouseButton button) {
     }
 }
 
-} // namespace Horizon::Input
+} // namespace Fract::Input

@@ -10,7 +10,7 @@
 
 #include "Log.h"
 
-namespace Ori {
+namespace Fract {
 
 Log::Log() noexcept {
     m_logger = spdlog::stdout_color_mt("horizon logger");
@@ -34,4 +34,4 @@ void Log::CheckDXResult(HRESULT hr, const char *func_name, int line) const noexc
     }
 }
 
-} // namespace Horizon
+} // namespace Fract

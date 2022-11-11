@@ -10,7 +10,7 @@
 
 #include "../log/log.h"
 
-namespace Ori {
+namespace Fract {
 
 Window::Window(const char *_name, u32 _width, u32 _height) noexcept : m_width(_width), m_height(_height) {
     if (glfwInit() != GLFW_TRUE) {
@@ -55,4 +55,4 @@ void Window::Close() noexcept {
     glfwSetWindowShouldClose(m_window, true); 
 }
 
-} // namespace Horizon
+} // namespace Fract

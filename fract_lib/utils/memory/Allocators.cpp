@@ -12,7 +12,7 @@
 
 #include "../log/Log.h"
 
-namespace Ori::Memory {
+namespace Fract::Memory {
 
 GlobalMemoryAllocator::GlobalMemoryAllocator() noexcept {
 }
@@ -55,4 +55,4 @@ bool LocalMemoryAllocator::do_is_equal(const std::pmr::memory_resource &other) c
     return false; 
 }
 
-} // namespace Horizon::Memory
+} // namespace Fract::Memory
