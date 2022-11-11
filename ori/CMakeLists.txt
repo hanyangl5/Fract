@@ -42,3 +42,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE assimp::assimp)
 # spdlog
 find_package(spdlog REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog spdlog::spdlog_header_only)
+
+
+find_package(mimalloc CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE mimalloc mimalloc)
