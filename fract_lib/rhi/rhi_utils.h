@@ -10,10 +10,23 @@
 
 #include <fstream>
 
+#include <D3D12MemAlloc.h>
+
 #include "../utils/defination.h"
 #include "../utils/log/log.h"
 
 namespace Fract {
+
+struct RendererContext {
+    ID3D12Device *device;
+    IDXGIFactory6 *factory;
+    IDXGIAdapter4 *active_gpu;
+    D3D12MA::Allocator *d3dma_allocator;
+    // ID3D12CommandQueue *graphics_queue, *compute_queue, *transfer_queue;
+    Container::FixedArray<ID3D12CommandQueue *, 3> queues;
+    IDXGISwapChain3 *swap_chain;
+};
+
 // definations
 
 // descriptor set
@@ -587,4 +600,142 @@ inline D3D12_COMMAND_LIST_TYPE to_dx_command_list_type(CommandQueueType type) {
         break;
     }
 }
+
+enum QueueOp { IGNORED, RELEASE, ACQUIRE };
+
+ inline DXGI_FORMAT ToDx12TextureFormat(TextureFormat format) {
+     switch (format) {
+     case TextureFormat::TEXTURE_FORMAT_R8_UINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RG8_UINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGB8_UINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGBA8_UINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_R16_UINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RG16_UINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGB16_UINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGBA16_UINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_R32_UINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RG32_UINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGB32_UINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGBA32_UINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_R8_UNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RG8_UNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGB8_UNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGBA8_UNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_R16_UNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RG16_UNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGB16_UNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGBA16_UNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_R8_SINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RG8_SINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGB8_SINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGBA8_SINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_R16_SINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RG16_SINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGB16_SINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGBA16_SINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_R32_SINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RG32_SINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGB32_SINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGBA32_SINT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_R8_SNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RG8_SNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGB8_SNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGBA8_SNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_R16_SNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RG16_SNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGB16_SNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGBA16_SNORM:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_R16_SFLOAT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RG16_SFLOAT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGB16_SFLOAT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGBA16_SFLOAT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_R32_SFLOAT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RG32_SFLOAT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGB32_SFLOAT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_RGBA32_SFLOAT:
+         break;
+     case TextureFormat::TEXTURE_FORMAT_D32_SFLOAT:
+         break;
+     default:
+         LOG_ERROR("invalid texture format, use rgba8 format as default");
+         return DXGI_FORMAT_R8G8B8A8_UNORM;
+         break;
+     }
+     return DXGI_FORMAT_R8G8B8A8_UNORM;
+ }
+
+ inline D3D12_RESOURCE_DIMENSION ToDX12TextureDimension(TextureType type) {
+     switch (type) {
+     case TextureType::TEXTURE_TYPE_1D:
+         return D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+         break;
+     case TextureType::TEXTURE_TYPE_2D:
+         return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+         break;
+     case TextureType::TEXTURE_TYPE_3D:
+         return D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+         break;
+     default:
+         LOG_ERROR("invalid image type, use texture2D as default");
+         return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+         break;
+     }
+ }
+
+ //inline D3D12_RESOURCE_FLAGS ToDX12TextureUsage(DescriptorTypes types) {
+ //    D3D12_RESOURCE_FLAGS flags{};
+ //    if (types & DESCRIPTOR_TYPE_RW_TEXTURE) {
+ //        flags |=
+ //            D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+ //    }
+ //    return flags;
+ //}
+
 } // namespace Fract

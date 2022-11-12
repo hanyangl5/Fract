@@ -12,6 +12,25 @@ int main() {
     SwapChain *swap_chain =
         device.CreateSwapChain(SwapChainCreateInfo{2}, window);
     
+    auto buffer = device.CreateBuffer(BufferCreateInfo{DescriptorType::DESCRIPTOR_TYPE_CONSTANT_BUFFER, ResourceState::RESOURCE_STATE_SHADER_RESOURCE,32},MemoryFlag::DEDICATE_GPU_MEMORY);
+
+                    TextureCreateInfo create_info{};
+
+    create_info.width = 64;
+                    create_info.height = 64;
+
+    create_info.depth = 1;
+    create_info.texture_format =
+        TextureFormat::TEXTURE_FORMAT_RGBA8_UNORM; // TOOD: optimize format
+    create_info.texture_type = TextureType::TEXTURE_TYPE_2D; // TODO: cubemap?
+    create_info.descriptor_types = DescriptorType::DESCRIPTOR_TYPE_TEXTURE;
+    create_info.initial_state = ResourceState::RESOURCE_STATE_SHADER_RESOURCE;
+    create_info.enanble_mipmap = false;
+
+    auto texture = device.CreateTexture(create_info);
+
+    //device.CreateComputePipeline();
+
     CommandList *cmd = device.GetCommandList(CommandQueueType::GRAPHICS);
     
     cmd->BeginRecording();
