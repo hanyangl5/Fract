@@ -57,8 +57,8 @@ class DescriptorSetAllocator {
 
 class Shader {
   public:
-    Shader(ShaderType type, const std::filesystem::path &rsd_path) noexcept;
-    ~Shader() noexcept = default;
+    Shader(const RendererContext& context,ShaderType type, const std::filesystem::path &file) noexcept;
+    ~Shader() noexcept;
 
     Shader(const Shader &rhs) noexcept = delete;
     Shader &operator=(const Shader &rhs) noexcept = delete;
@@ -67,14 +67,19 @@ class Shader {
 
     ShaderType GetType() const noexcept;
 
+    ID3DBlob *get() const noexcept { return fxc_blob; }
+
     const std::filesystem::path &
     GetRootSignatureDescriptionPath() const noexcept {
         return m_rsd_path;
     }
 
   protected:
+    const RendererContext &m_context;
     const ShaderType m_type{};
     const std::filesystem::path m_rsd_path; // lazy read
+    IDxcBlob *shader_blob{};
+    ID3DBlob* fxc_blob{};
 };
 
 class Pipeline {
@@ -106,6 +111,9 @@ class Pipeline {
     ID3D12PipelineState *get() const noexcept { return gpu_pipeline; }
 
   private:
+    void CreateGraphicsPipeline();
+    void CreateComputePipeline();
+    void CreateRootSignature();
     void ParseRootSignature();
     void ParseRootSignatureFromShader(Shader *shader);
 
@@ -118,6 +126,7 @@ class Pipeline {
     Container::FixedArray<u32, DESCRIPTOR_SET_UPDATE_FREQUENCIES>
         vk_binding_count{};
     ID3D12PipelineState *gpu_pipeline{};
+    ID3D12RootSignature *root_signature{};
 };
 
 }

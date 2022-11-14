@@ -24,6 +24,7 @@ void Device::Initialize() {
     CreateFactory();
     CreateDevice();
     InitializeD3DMA();
+    CreateShaderCompiler();
 }
 
 void Device::CreateFactory() noexcept {
@@ -108,6 +109,12 @@ void Device::InitializeD3DMA() noexcept {
                                              &render_context.d3dma_allocator));
 }
 
+void Device::CreateShaderCompiler() {
+    DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&render_context.dxc_utils));
+    DxcCreateInstance(CLSID_DxcCompiler,
+                      IID_PPV_ARGS(&render_context.dxc_compiler));
+}
+
 Buffer *Device::CreateBuffer(const BufferCreateInfo &buffer_create_info,
                              MemoryFlag memory_flag) {
     return Memory::Alloc<Buffer>(render_context, buffer_create_info, memory_flag);
@@ -130,6 +137,11 @@ CommandList *Device::GetCommandList(CommandQueueType type) {
     return thread_command_context->GetCommandList(type);
 }
 
+Shader *Device::CreateShader(ShaderType type, u32 compile_flags,
+                             const std::filesystem::path &file_name) {
+    return Memory::Alloc<Shader>(render_context, type, file_name);
+}
+
 Pipeline *
 Device::CreateGraphicsPipeline(const GraphicsPipelineCreateInfo &create_info) {
     return nullptr;
@@ -137,8 +149,8 @@ Device::CreateGraphicsPipeline(const GraphicsPipelineCreateInfo &create_info) {
 
 Pipeline *
 Device::CreateComputePipeline(const ComputePipelineCreateInfo &create_info) {
-    return nullptr;
-    //render_context.device->CreateComputePipelineState();
+    return Memory::Alloc<Pipeline>(render_context, create_info,
+                                   *descriptor_set_allocator);
 }
 
 void Device::SubmitCommandLists(const QueueSubmitInfo &queue_submit_info) {
@@ -149,6 +161,34 @@ void Device::SubmitCommandLists(const QueueSubmitInfo &queue_submit_info) {
     }
     render_context.queues[queue_submit_info.queue_type]->ExecuteCommandLists(
         static_cast<u32>(command_lists.size()), command_lists.data());
+
+        // Create synchronization objects and wait until assets have been uploaded
+    // to the GPU.
+    {
+        CHECK_DX_RESULT(render_context.device->CreateFence(0, D3D12_FENCE_FLAG_NONE,
+                                            IID_PPV_ARGS(&m_fence)));
+        m_fenceValue = 1;
+
+        // Create an event handle to use for frame synchronization.
+        m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        if (m_fenceEvent == nullptr) {
+            CHECK_DX_RESULT(HRESULT_FROM_WIN32(GetLastError()));
+        }
+
+        // Wait for the command list to execute; we are reusing the same command
+        // list in our main loop but for now, we just want to wait for setup to
+        // complete before continuing.
+        const UINT64 fence = m_fenceValue;
+        CHECK_DX_RESULT(render_context.queues[CommandQueueType::GRAPHICS]->Signal(m_fence, fence));
+        m_fenceValue++;
+
+        // Wait until the previous frame is finished.
+        if (m_fence->GetCompletedValue() < fence) {
+            CHECK_DX_RESULT(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
+            WaitForSingleObject(m_fenceEvent, INFINITE);
+        }
+
+    }
 }
 
 void Device::WaitAll() {}

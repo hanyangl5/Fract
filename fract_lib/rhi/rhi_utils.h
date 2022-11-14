@@ -10,6 +10,8 @@
 
 #include <fstream>
 
+#include <directx-dxc/dxcapi.h>
+#include <directx-dxc/d3d12shader.h>
 #include <D3D12MemAlloc.h>
 
 #include "../utils/defination.h"
@@ -25,6 +27,8 @@ struct RendererContext {
     // ID3D12CommandQueue *graphics_queue, *compute_queue, *transfer_queue;
     Container::FixedArray<ID3D12CommandQueue *, 3> queues;
     IDXGISwapChain3 *swap_chain;
+    IDxcUtils *dxc_utils;
+    IDxcCompiler3 *dxc_compiler;
 };
 
 // definations

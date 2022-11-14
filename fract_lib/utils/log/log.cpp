@@ -13,7 +13,7 @@
 namespace Fract {
 
 Log::Log() noexcept {
-    m_logger = spdlog::stdout_color_mt("horizon logger");
+    m_logger = spdlog::stdout_color_mt("Fract logger");
     spdlog::set_default_logger(m_logger);
 #ifndef NDEBUG
     spdlog::set_level(spdlog::level::debug);

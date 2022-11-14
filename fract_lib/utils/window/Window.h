@@ -14,6 +14,7 @@
 // https://social.msdn.microsoft.com/Forums/en-US/7d5d7d91-5ec3-42fb-a2fd-c52b5e01349b/c4005-apientry-makro-neudefinition-in-minwindefh-and-thus-2-unknown-identifier?forum=vcgeneral
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #endif
 

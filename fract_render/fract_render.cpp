@@ -1,7 +1,8 @@
 #include <rhi/device.h>
 #include <utils/window/Window.h>
-
+#include <utils/renderdoc/RenderDoc.h>
 using namespace Fract;
+
 int main() {
 
     Memory::initialize();
@@ -11,13 +12,16 @@ int main() {
     Fract::Window *window = new Fract::Window("fract", 1280, 800);
     SwapChain *swap_chain =
         device.CreateSwapChain(SwapChainCreateInfo{2}, window);
-    
-    auto buffer = device.CreateBuffer(BufferCreateInfo{DescriptorType::DESCRIPTOR_TYPE_CONSTANT_BUFFER, ResourceState::RESOURCE_STATE_SHADER_RESOURCE,32},MemoryFlag::DEDICATE_GPU_MEMORY);
 
-                    TextureCreateInfo create_info{};
+    auto buffer = device.CreateBuffer(
+        BufferCreateInfo{DescriptorType::DESCRIPTOR_TYPE_CONSTANT_BUFFER,
+                         ResourceState::RESOURCE_STATE_SHADER_RESOURCE, 32},
+        MemoryFlag::DEDICATE_GPU_MEMORY);
+
+    TextureCreateInfo create_info{};
 
     create_info.width = 64;
-                    create_info.height = 64;
+    create_info.height = 64;
 
     create_info.depth = 1;
     create_info.texture_format =
@@ -29,22 +33,39 @@ int main() {
 
     auto texture = device.CreateTexture(create_info);
 
-    //device.CreateComputePipeline();
+    // device.CreateComputePipeline();
 
-    CommandList *cmd = device.GetCommandList(CommandQueueType::GRAPHICS);
-    
-    cmd->BeginRecording();
-    cmd->Dispatch(1, 1, 1);
-    cmd->EndRecording();
-    
-
-    QueueSubmitInfo submit_info{};
-    submit_info.command_lists.push_back(cmd);
-
-    device.SubmitCommandLists(submit_info);
+    Shader *cs = device.CreateShader(ShaderType::COMPUTE_SHADER, 0,
+                                     "C:/FILES/Ori/data/test.comp.hlsl");
+    Pipeline *compute_pass =
+        device.CreateComputePipeline(ComputePipelineCreateInfo{});
+    compute_pass->SetComputeShader(cs);
+    // compute_pass->GetDescriptorSet();
+    window->Close();
+    // RDC::StartFrameCapture();
     while (!window->ShouldClose()) {
         glfwPollEvents();
+        CommandList *cmd = device.GetCommandList(CommandQueueType::COMPUTE);
 
+        cmd->BeginRecording();
+        cmd->BindPipeline(compute_pass);
+        cmd->Dispatch(1, 1, 1);
+        cmd->EndRecording();
+
+        QueueSubmitInfo submit_info{};
+        submit_info.command_lists.push_back(cmd);
+        submit_info.queue_type = CommandQueueType::COMPUTE;
+        device.SubmitCommandLists(submit_info);
+        LOG_INFO("a");
+        swap_chain
     }
+    while (1) {
+
+        
+    }
+
+    //RDC::EndFrameCapture();
+
+
 
 }

@@ -80,7 +80,7 @@ class Device {
     void PickGPU(IDXGIFactory6 *factory, IDXGIAdapter4 **gpu) noexcept;
     void CreateDevice() noexcept;
     void InitializeD3DMA() noexcept;
-    
+    void CreateShaderCompiler();
     
     Buffer *CreateBuffer(const BufferCreateInfo &buffer_create_info,
                          MemoryFlag memory_flag);
@@ -92,6 +92,9 @@ class Device {
     RenderTarget *
     CreateRenderTarget(const RenderTargetCreateInfo &render_target_create_info);
     CommandList *GetCommandList(CommandQueueType type);
+    
+    Shader *CreateShader(ShaderType type, u32 compile_flags,
+                         const std::filesystem::path &file_name);
     Pipeline *
     CreateGraphicsPipeline(const GraphicsPipelineCreateInfo &create_info);
 
@@ -106,6 +109,9 @@ class Device {
   private:
     RendererContext render_context{};
     DescriptorSetAllocator *descriptor_set_allocator{};
+    HANDLE m_fenceEvent;
+    ID3D12Fence* m_fence;
+    UINT64 m_fenceValue;
 };
 
 } // namespace Fract

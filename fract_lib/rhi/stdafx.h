@@ -14,7 +14,7 @@
 // are changed infrequently.
 
 #pragma once
-
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 #include "d3d12.h"
@@ -27,8 +27,14 @@
 #include <string>
 #include <wrl.h>
 
+#include <directx-dxc/dxcapi.h>
+#include <directx-dxc/d3d12shader.h>
+
+#include <d3dcompiler.h>
+
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "d3dcompiler.lib")
 
 #define DX12_API_VERSION D3D_FEATURE_LEVEL_12_1
 
