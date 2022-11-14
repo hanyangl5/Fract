@@ -1,4 +1,4 @@
-Fract is a ray tracer based on DirectX 12.
+Fract is a phyiscally based ray tracer based on DirectX 12.
 
 features to be implemented
 
@@ -6,5 +6,4 @@ features to be implemented
 - AI Denoise
 - SDF Tracing
 - Disney Pricipled BSDF
-- accerlation structure for light geometry intersection
 
