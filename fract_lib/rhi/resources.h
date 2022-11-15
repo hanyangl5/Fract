@@ -78,14 +78,6 @@ class RenderTarget {
     ID3D12Resource *gpu_render_target{};
 };
 
-class Fence {
-  public:
-  private:
-    ID3D12Fence *gpu_fence;
-};
-
-
-
 class SwapChain {
   public:
     SwapChain(const RendererContext &render_context,
@@ -95,11 +87,11 @@ class SwapChain {
 
     // void AcquireNextFrame(
     //     SwapChainSemaphoreContext *recycled_sempahores) noexcept;
-
+    void AcquireNextFrame() noexcept;
     RenderTarget *GetRenderTarget() noexcept {
         return render_targets[current_frame_index];
     }
-
+    IDXGISwapChain3 *get() const noexcept { return gpu_swap_chain; }
   public:
     Container::Array<RenderTarget *> render_targets{};
     u32 m_back_buffer_count{};
@@ -120,5 +112,15 @@ class Semaphore {
   public:
 };
 
+class Fence {
+  public:
+    Fence(const RendererContext& context) noexcept;
+    ~Fence() noexcept;
+    void Signal();
+    const RendererContext &m_context{};
+    ID3D12Fence *gpu_fence{};
+    HANDLE wait_idle_fence_event{};
+    UINT64 m_fenceValue{};
+};
 
 }

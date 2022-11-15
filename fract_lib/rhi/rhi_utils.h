@@ -426,7 +426,9 @@ using RenderTargetFormat = TextureFormat;
 
 enum class RenderTargetType { COLOR, DEPTH_STENCIL, UNDEFINED };
 
+class SwapChain;
 struct RenderTargetCreateInfo {
+    SwapChain *swap_chain;
     RenderTargetFormat rt_format;
     RenderTargetType rt_type;
     u32 width, height;

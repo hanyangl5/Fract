@@ -79,7 +79,20 @@ CommandList *CommandContext::GetCommandList(CommandQueueType type) {
     return m_command_lists[type][count];
 }
 
-void CommandContext::Reset() {}
+void CommandContext::Reset() {
+    for (auto &allocator : m_command_allocators) {
+        if (allocator) {
+            allocator->Reset();
+            m_command_lists_count.fill(0);
+        }
+    }
+    //for (auto &type : m_command_lists) {
+    //    for (auto &cmd : type) {
+    //        Memory::Free(cmd);
+    //        cmd = nullptr;
+    //    }
+    //}
+}
 
 void CommandList::DrawInstanced(u32 vertex_count, u32 first_vertex,
                                 u32 instance_count, u32 first_instance) {

@@ -162,47 +162,56 @@ void Device::SubmitCommandLists(const QueueSubmitInfo &queue_submit_info) {
     render_context.queues[queue_submit_info.queue_type]->ExecuteCommandLists(
         static_cast<u32>(command_lists.size()), command_lists.data());
 
-        // Create synchronization objects and wait until assets have been uploaded
-    // to the GPU.
-    {
-        CHECK_DX_RESULT(render_context.device->CreateFence(0, D3D12_FENCE_FLAG_NONE,
-                                            IID_PPV_ARGS(&m_fence)));
-        m_fenceValue = 1;
-
-        // Create an event handle to use for frame synchronization.
-        m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-        if (m_fenceEvent == nullptr) {
-            CHECK_DX_RESULT(HRESULT_FROM_WIN32(GetLastError()));
-        }
-
-        // Wait for the command list to execute; we are reusing the same command
-        // list in our main loop but for now, we just want to wait for setup to
-        // complete before continuing.
-        const UINT64 fence = m_fenceValue;
-        CHECK_DX_RESULT(render_context.queues[CommandQueueType::GRAPHICS]->Signal(m_fence, fence));
-        m_fenceValue++;
-
-        // Wait until the previous frame is finished.
-        if (m_fence->GetCompletedValue() < fence) {
-            CHECK_DX_RESULT(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
-            WaitForSingleObject(m_fenceEvent, INFINITE);
-        }
-
-    }
+    GetFence(queue_submit_info.queue_type);
 }
 
 void Device::WaitAll() {}
 
 void Device::WaitGpuExecution(CommandQueueType type) {
-    // render_context.queues[type]->Signal();
-    //auto command_queue = render_context.queues[type];
-    //command_queue->Signal(fence, fence_value[current_back_buffer]);
+    
+    assert(fence_index[type] != UINT_MAX); // no need to wait twice
+    if (fence_index[type] == 0)
+        return;
+    
+    for (u32 i = 0; i < fence_index[type]; ++i) {
+        fences[type][i]->Signal();
+    }
+    fence_index[type] = UINT_MAX;
+}
 
-    //hres = fence->SetEventOnCompletion(fence_value[current_back_buffer],
-    //                                   fence_event);
+void Device::Present(const QueuePresentInfo &present_info) {
+    present_info.swap_chain->get()->Present(1, 0);
+}
 
-    //WaitForSingleObjectEx(fence_event, INFINITE, FALSE);
-    //fence_value[current_back_buffer]++;
+void Device::AcquireNextFrame(SwapChain *swap_chain) {
+    swap_chain->AcquireNextFrame();
+
+    for (u32 queue_type = 0; queue_type < 3; queue_type++) {
+        if (fence_index[queue_type] == 0)
+            continue;
+        fence_index[queue_type] = 0;
+        for (auto &fence : fences[queue_type]) {
+            Memory::Free(fence);
+            fence = nullptr;
+        }
+        fences[queue_type].clear();
+    }
+
+    if (thread_command_context) {
+        thread_command_context->Reset();
+    }
+}
+
+Fence *Device::GetFence(CommandQueueType type) {
+    Fence *fence;
+    if (fence_index[type] < fences[type].size()) {
+        fence = fences[type][fence_index[type]];
+    } else {
+        fence = Memory::Alloc<Fence>(render_context);
+        fences[type].push_back(fence);
+    }
+    fence_index[type]++;
+    return fence;
 }
 
 RenderTarget *Device::CreateRenderTarget(

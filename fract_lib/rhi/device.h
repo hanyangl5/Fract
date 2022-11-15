@@ -105,13 +105,16 @@ class Device {
 
     void WaitAll();
     void WaitGpuExecution(CommandQueueType type);
-
+    void Present(const QueuePresentInfo &present_info);
+    void AcquireNextFrame(SwapChain *swap_chain);
+  private:
+    Fence *GetFence(CommandQueueType type);
   private:
     RendererContext render_context{};
     DescriptorSetAllocator *descriptor_set_allocator{};
-    HANDLE m_fenceEvent;
-    ID3D12Fence* m_fence;
-    UINT64 m_fenceValue;
+
+    Container::FixedArray<Container::Array<Fence*>, 3> fences{};
+    Container::FixedArray<u32, 3> fence_index{};
 };
 
 } // namespace Fract

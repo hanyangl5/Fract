@@ -72,6 +72,11 @@ SwapChain::SwapChain(const RendererContext &render_context,
     current_frame_index = gpu_swap_chain->GetCurrentBackBufferIndex();
 }
 
+void SwapChain::AcquireNextFrame() noexcept {
+    current_frame_index = gpu_swap_chain->GetCurrentBackBufferIndex();
+    ;
+}
+
 RenderTarget::RenderTarget(const RendererContext &context,
                            const RenderTargetCreateInfo &create_info) noexcept
     : m_context(context) {
@@ -120,4 +125,44 @@ Texture::Texture(const RendererContext &render_context,
         &allocation_desc, &_texture_create_info, D3D12_RESOURCE_STATE_COPY_DEST,
         nullptr, &m_allocation, IID_NULL, nullptr));
 }
+
+Fence::Fence(const RendererContext &context) noexcept : m_context(context) {
+    // Create synchronization objects and wait until assets have been uploaded
+    // to the GPU.
+    {
+        CHECK_DX_RESULT(m_context.device->CreateFence(
+            0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&gpu_fence)));
+        m_fenceValue = 1;
+
+        // Create an event handle to use for frame synchronization.
+        wait_idle_fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        if (wait_idle_fence_event == nullptr) {
+            CHECK_DX_RESULT(HRESULT_FROM_WIN32(GetLastError()));
+        }
+    }
+}
+
+Fence::~Fence() noexcept {
+    (gpu_fence->Release());
+    CloseHandle(wait_idle_fence_event);
+}
+
+void Fence::Signal() {
+
+    // Wait for the command list to execute; we are reusing the same command
+    // list in our main loop but for now, we just want to wait for setup to
+    // complete before continuing.
+    const UINT64 fence = m_fenceValue;
+    CHECK_DX_RESULT(
+        m_context.queues[CommandQueueType::GRAPHICS]->Signal(gpu_fence, fence));
+    m_fenceValue++;
+
+    // Wait until the previous frame is finished.
+    if (gpu_fence->GetCompletedValue() < fence) {
+        CHECK_DX_RESULT(
+            gpu_fence->SetEventOnCompletion(fence, wait_idle_fence_event));
+        WaitForSingleObject(wait_idle_fence_event, INFINITE);
+    }
+}
+
 } // namespace Fract

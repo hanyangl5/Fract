@@ -18,20 +18,6 @@ int main() {
                          ResourceState::RESOURCE_STATE_SHADER_RESOURCE, 32},
         MemoryFlag::DEDICATE_GPU_MEMORY);
 
-    TextureCreateInfo create_info{};
-
-    create_info.width = 64;
-    create_info.height = 64;
-
-    create_info.depth = 1;
-    create_info.texture_format =
-        TextureFormat::TEXTURE_FORMAT_RGBA8_UNORM; // TOOD: optimize format
-    create_info.texture_type = TextureType::TEXTURE_TYPE_2D; // TODO: cubemap?
-    create_info.descriptor_types = DescriptorType::DESCRIPTOR_TYPE_TEXTURE;
-    create_info.initial_state = ResourceState::RESOURCE_STATE_SHADER_RESOURCE;
-    create_info.enanble_mipmap = false;
-
-    auto texture = device.CreateTexture(create_info);
 
     // device.CreateComputePipeline();
 
@@ -41,28 +27,28 @@ int main() {
         device.CreateComputePipeline(ComputePipelineCreateInfo{});
     compute_pass->SetComputeShader(cs);
     // compute_pass->GetDescriptorSet();
-    window->Close();
-    // RDC::StartFrameCapture();
+
     while (!window->ShouldClose()) {
         glfwPollEvents();
-        CommandList *cmd = device.GetCommandList(CommandQueueType::COMPUTE);
+        device.AcquireNextFrame(swap_chain);
+        for (u32 i = 0; i < 5; i++) {
+            CommandList *cmd = device.GetCommandList(CommandQueueType::COMPUTE);
+            cmd->BeginRecording();
+            cmd->BindPipeline(compute_pass);
+            cmd->Dispatch(1, 1, 1);
+            cmd->EndRecording();
+            QueueSubmitInfo submit_info{};
+            submit_info.command_lists.push_back(cmd);
+            submit_info.queue_type = CommandQueueType::COMPUTE;
+            device.SubmitCommandLists(submit_info);
+        }
 
-        cmd->BeginRecording();
-        cmd->BindPipeline(compute_pass);
-        cmd->Dispatch(1, 1, 1);
-        cmd->EndRecording();
-
-        QueueSubmitInfo submit_info{};
-        submit_info.command_lists.push_back(cmd);
-        submit_info.queue_type = CommandQueueType::COMPUTE;
-        device.SubmitCommandLists(submit_info);
-        LOG_INFO("a");
-        swap_chain
+        QueuePresentInfo present_info{};
+        present_info.swap_chain = swap_chain;
+        device.Present(present_info);
+        device.WaitGpuExecution(CommandQueueType::COMPUTE);
     }
-    while (1) {
 
-        
-    }
 
     //RDC::EndFrameCapture();
 
