@@ -744,4 +744,34 @@ enum QueueOp { IGNORED, RELEASE, ACQUIRE };
  //    return flags;
  //}
 
-} // namespace Fract
+ 
+enum DescriptorHeapType { RTV, CBV_SRV_UAV, SAMPLER };
+
+ struct DescriptorHeap {
+     ID3D12DescriptorHeap *gpu_heap;
+     u32 max_descriptor_count;
+     u32 descriptor_size;
+     DescriptorHeapType type;
+     CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_handle;
+     CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_handle;
+ };
+
+ inline D3D12_DESCRIPTOR_HEAP_TYPE
+ ToDxDescriptorHeapType(DescriptorHeapType type) {
+     switch (type) {
+     case Fract::RTV:
+         return D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+         break;
+     case Fract::CBV_SRV_UAV:
+         return D3D12_DESCRIPTOR_HEAP_TYPE::
+             D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+         break;
+     case Fract::SAMPLER:
+         return D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+         break;
+     default:
+         break;
+     }
+ }
+
+ } // namespace Fract

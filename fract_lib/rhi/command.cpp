@@ -134,4 +134,69 @@ void CommandList::BindPipeline(Pipeline *pipeline) {
     gpu_command_list->SetPipelineState(pipeline->get());
 }
 
+void CommandList::BindDescriptorSets(Pipeline *pipeline, DescriptorSet *set) {
+
+
+    //// Set root signature if the current one differs from pRootSignature
+    //reset_root_signature(
+    //    pCmd, (PipelineType)pDescriptorSet->mD3D12.mPipelineType,
+    //    pDescriptorSet->mD3D12.pRootSignature->mD3D12.pDxRootSignature);
+
+    //if (pCmd->mD3D12.mBoundDescriptorSetIndices[pDescriptorSet->mD3D12
+    //                                                .mUpdateFrequency] !=
+    //        index ||
+    //    pCmd->mD3D12.pBoundDescriptorSets[pDescriptorSet->mD3D12
+    //                                          .mUpdateFrequency] !=
+    //        pDescriptorSet) {
+    //    pCmd->mD3D12
+    //        .pBoundDescriptorSets[pDescriptorSet->mD3D12.mUpdateFrequency] =
+    //        pDescriptorSet;
+    //    pCmd->mD3D12.mBoundDescriptorSetIndices[pDescriptorSet->mD3D12
+    //                                                .mUpdateFrequency] = index;
+
+    //    // Bind the descriptor tables associated with this DescriptorSet
+    //    if (pDescriptorSet->mD3D12.mPipelineType == PIPELINE_TYPE_GRAPHICS) {
+    //        if (pDescriptorSet->mD3D12.mCbvSrvUavHandle !=
+    //            D3D12_DESCRIPTOR_ID_NONE) {
+    //            pCmd->mD3D12.pDxCmdList->SetGraphicsRootDescriptorTable(
+    //                pDescriptorSet->mD3D12.mCbvSrvUavRootIndex,
+    //                descriptor_id_to_gpu_handle(
+    //                    pCmd->mD3D12.pBoundHeaps[0],
+    //                    pDescriptorSet->mD3D12.mCbvSrvUavHandle +
+    //                        index * pDescriptorSet->mD3D12.mCbvSrvUavStride));
+    //        }
+
+    //        if (pDescriptorSet->mD3D12.mSamplerHandle !=
+    //            D3D12_DESCRIPTOR_ID_NONE) {
+    //            pCmd->mD3D12.pDxCmdList->SetGraphicsRootDescriptorTable(
+    //                pDescriptorSet->mD3D12.mSamplerRootIndex,
+    //                descriptor_id_to_gpu_handle(
+    //                    pCmd->mD3D12.pBoundHeaps[1],
+    //                    pDescriptorSet->mD3D12.mSamplerHandle +
+    //                        index * pDescriptorSet->mD3D12.mSamplerStride));
+    //        }
+    //    } else {
+    //        if (pDescriptorSet->mD3D12.mCbvSrvUavHandle !=
+    //            D3D12_DESCRIPTOR_ID_NONE) {
+    //            pCmd->mD3D12.pDxCmdList->SetComputeRootDescriptorTable(
+    //                pDescriptorSet->mD3D12.mCbvSrvUavRootIndex,
+    //                descriptor_id_to_gpu_handle(
+    //                    pCmd->mD3D12.pBoundHeaps[0],
+    //                    pDescriptorSet->mD3D12.mCbvSrvUavHandle +
+    //                        index * pDescriptorSet->mD3D12.mCbvSrvUavStride));
+    //        }
+
+    //        if (pDescriptorSet->mD3D12.mSamplerHandle !=
+    //            D3D12_DESCRIPTOR_ID_NONE) {
+    //            pCmd->mD3D12.pDxCmdList->SetComputeRootDescriptorTable(
+    //                pDescriptorSet->mD3D12.mSamplerRootIndex,
+    //                descriptor_id_to_gpu_handle(
+    //                    pCmd->mD3D12.pBoundHeaps[1],
+    //                    pDescriptorSet->mD3D12.mSamplerHandle +
+    //                        index * pDescriptorSet->mD3D12.mSamplerStride));
+    //        }
+    //    }
+    //}
+}
+
 }

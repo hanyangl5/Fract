@@ -51,8 +51,6 @@ void Pipeline::CreateComputePipeline() {
 }
 
 void Pipeline::CreateRootSignature() {
-    // Create a root signature consisting of a descriptor table with a single
-    // CBV.
     {
         D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
 
@@ -60,12 +58,6 @@ void Pipeline::CreateRootSignature() {
         // CheckFeatureSupport succeeds, the HighestVersion returned will not be
         // greater than this.
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-
-        if (FAILED(m_context.device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE,
-                                                 &featureData,
-                                                 sizeof(featureData)))) {
-            featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
-        }
 
         CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
         CD3DX12_ROOT_PARAMETER1 rootParameters[1];
@@ -85,10 +77,10 @@ void Pipeline::CreateRootSignature() {
             D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 
         CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-        //rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0,
-        //                           nullptr, rootSignatureFlags);
-        rootSignatureDesc.Init_1_1(0, nullptr, 0,
+        rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0,
                                    nullptr, rootSignatureFlags);
+        //rootSignatureDesc.Init_1_1(0, nullptr, 0,
+        //                           nullptr, rootSignatureFlags);
         ID3DBlob* signature;
         ID3DBlob* error;
         CHECK_DX_RESULT(D3DX12SerializeVersionedRootSignature(
@@ -114,16 +106,16 @@ Shader::Shader(const RendererContext &context, ShaderType type,
     std::string s = file_name.string();
 
 
-    ID3DBlob *error_msg1{};
-    D3DCompileFromFile(std::wstring(s.begin(), s.end()).c_str(), nullptr,
-                       nullptr,
-                       "Main", "cs_5_0", 0, 0, &fxc_blob, &error_msg1);
-    if (error_msg1 != nullptr && error_msg1->GetBufferSize() > 0) {
-        LOG_ERROR("failed to compile shader: {}",
-                  std::string{(char *)error_msg1->GetBufferPointer(),
-                              error_msg1->GetBufferSize()});
-    }
-    return;
+    //ID3DBlob *error_msg1{};
+    //D3DCompileFromFile(std::wstring(s.begin(), s.end()).c_str(), nullptr,
+    //                   nullptr,
+    //                   "Main", "cs_5_0", 0, 0, &fxc_blob, &error_msg1);
+    //if (error_msg1 != nullptr && error_msg1->GetBufferSize() > 0) {
+    //    LOG_ERROR("failed to compile shader: {}",
+    //              std::string{(char *)error_msg1->GetBufferPointer(),
+    //                          error_msg1->GetBufferSize()});
+    //}
+    //return;
     // read source file
     IDxcBlobEncoding *source_file = nullptr;
     auto str = file_name.string();
@@ -200,5 +192,42 @@ Shader::Shader(const RendererContext &context, ShaderType type,
 }
 
 Shader::~Shader() noexcept {}
+
+DescriptorSetAllocator::DescriptorSetAllocator(
+    const RendererContext &context) noexcept
+    : m_context(context) {
+
+    descriptor_heaps[RTV].max_descriptor_count = 8;
+    descriptor_heaps[RTV].type = RTV;
+    descriptor_heaps[CBV_SRV_UAV].max_descriptor_count = 8192;
+    descriptor_heaps[CBV_SRV_UAV].type = CBV_SRV_UAV;
+    descriptor_heaps[SAMPLER].max_descriptor_count = 128;
+    descriptor_heaps[SAMPLER].type = SAMPLER;
+
+    for (auto &heap : descriptor_heaps) {
+        // Describe and create a render target view (RTV) descriptor heap.
+        auto heap_type = ToDxDescriptorHeapType(heap.type);
+        bool b_shader_visble =
+            (heap.type == CBV_SRV_UAV) || (heap.type == SAMPLER);
+        D3D12_DESCRIPTOR_HEAP_DESC heap_desc = {};
+        heap_desc.NumDescriptors = heap.max_descriptor_count;
+        heap_desc.Type = heap_type;
+        heap_desc.Flags = b_shader_visble
+                              ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
+                              : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+
+        CHECK_DX_RESULT(m_context.device->CreateDescriptorHeap(
+            &heap_desc, IID_PPV_ARGS(&heap.gpu_heap)));
+        heap.descriptor_size =
+            m_context.device->GetDescriptorHandleIncrementSize(heap_type);
+        heap.cpu_handle = heap.gpu_heap->GetCPUDescriptorHandleForHeapStart();
+        heap.gpu_handle =
+            b_shader_visble
+                ? heap.gpu_heap->GetGPUDescriptorHandleForHeapStart()
+                : CD3DX12_GPU_DESCRIPTOR_HANDLE{};
+    }
+    
+
+}
 
 } // namespace Fract

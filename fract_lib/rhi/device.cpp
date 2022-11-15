@@ -25,12 +25,24 @@ void Device::Initialize() {
     CreateDevice();
     InitializeD3DMA();
     CreateShaderCompiler();
+    descriptor_set_allocator =
+        Memory::Alloc<DescriptorSetAllocator>(render_context);
 }
 
 void Device::CreateFactory() noexcept {
     u32 dxgi_factory_flags = 0;
+
+    // Enable the debug layer (requires the Graphics Tools "optional
+    // feature"). NOTE: Enabling the debug layer after device creation will
+    // invalidate the active device.
 #ifndef NDEBUG
-    dxgi_factory_flags |= DXGI_CREATE_FACTORY_DEBUG;
+    ID3D12Debug *debugController;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
+        debugController->EnableDebugLayer();
+
+        // Enable additional debug layers.
+        dxgi_factory_flags |= DXGI_CREATE_FACTORY_DEBUG;
+    }
 #endif
     CHECK_DX_RESULT(CreateDXGIFactory2(dxgi_factory_flags,
                                        IID_PPV_ARGS(&render_context.factory)));
@@ -184,6 +196,7 @@ void Device::Present(const QueuePresentInfo &present_info) {
 }
 
 void Device::AcquireNextFrame(SwapChain *swap_chain) {
+    if (swap_chain)
     swap_chain->AcquireNextFrame();
 
     for (u32 queue_type = 0; queue_type < 3; queue_type++) {

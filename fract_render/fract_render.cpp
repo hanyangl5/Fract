@@ -1,25 +1,23 @@
 #include <rhi/device.h>
-#include <utils/window/Window.h>
 #include <utils/renderdoc/RenderDoc.h>
+#include <utils/window/Window.h>
+
 using namespace Fract;
 
-int main() {
+u32 RoundUp(f32 x) { return static_cast<u32>(std::ceil(x)); }
 
+int main() {
+    u32 width = 800;
+    u32 height = 600;
+    u32 worp_group_size_x = RoundUp((float(width) / 8));
+    u32 worp_group_size_y = RoundUp((float(600) / 8));
     Memory::initialize();
 
     Fract::Device device;
     device.Initialize();
-    Fract::Window *window = new Fract::Window("fract", 1280, 800);
+    Fract::Window *window = new Fract::Window("fract", width, height);
     SwapChain *swap_chain =
         device.CreateSwapChain(SwapChainCreateInfo{2}, window);
-
-    auto buffer = device.CreateBuffer(
-        BufferCreateInfo{DescriptorType::DESCRIPTOR_TYPE_CONSTANT_BUFFER,
-                         ResourceState::RESOURCE_STATE_SHADER_RESOURCE, 32},
-        MemoryFlag::DEDICATE_GPU_MEMORY);
-
-
-    // device.CreateComputePipeline();
 
     Shader *cs = device.CreateShader(ShaderType::COMPUTE_SHADER, 0,
                                      "C:/FILES/Ori/data/test.comp.hlsl");
@@ -28,6 +26,8 @@ int main() {
     compute_pass->SetComputeShader(cs);
     // compute_pass->GetDescriptorSet();
 
+    Texture *render_target = device.CreateTexture(TextureCreateInfo{DescriptorType::DESCRIPTOR_TYPE_RW_TEXTURE,ResourceState::RESOURCE_STATE_RENDER_TARGET,TextureType::TEXTURE_TYPE_2D,TextureFormat::TEXTURE_FORMAT_RGBA8_UNORM,width, height});
+
     while (!window->ShouldClose()) {
         glfwPollEvents();
         device.AcquireNextFrame(swap_chain);
@@ -35,7 +35,7 @@ int main() {
             CommandList *cmd = device.GetCommandList(CommandQueueType::COMPUTE);
             cmd->BeginRecording();
             cmd->BindPipeline(compute_pass);
-            cmd->Dispatch(1, 1, 1);
+            cmd->Dispatch(worp_group_size_x, worp_group_size_y, 1);
             cmd->EndRecording();
             QueueSubmitInfo submit_info{};
             submit_info.command_lists.push_back(cmd);
@@ -49,9 +49,5 @@ int main() {
         device.WaitGpuExecution(CommandQueueType::COMPUTE);
     }
 
-
-    //RDC::EndFrameCapture();
-
-
-
+    // RDC::EndFrameCapture();
 }
