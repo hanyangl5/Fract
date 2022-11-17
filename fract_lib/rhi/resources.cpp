@@ -24,8 +24,8 @@ Buffer::Buffer(const RendererContext &render_context,
     // which is effectively 64KB.
     auto _buffer_create_info = CD3DX12_RESOURCE_DESC::Buffer(
         buffer_create_info.size, usage,
-        D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
-
+        0);
+    
     D3D12MA::ALLOCATION_DESC allocation_desc{};
     D3D12_RESOURCE_STATES initial_state{};
     if (memory_flag == MemoryFlag::CPU_VISABLE_MEMORY) {
@@ -39,6 +39,29 @@ Buffer::Buffer(const RendererContext &render_context,
     CHECK_DX_RESULT(render_context.d3dma_allocator->CreateResource(
         &allocation_desc, &_buffer_create_info, initial_state, NULL,
         &m_allocation, IID_NULL, NULL));
+
+    if ((buffer_create_info.descriptor_types &
+         DescriptorType::DESCRIPTOR_TYPE_CONSTANT_BUFFER) ==
+        DescriptorType::DESCRIPTOR_TYPE_CONSTANT_BUFFER) {
+
+        D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
+        cbv_desc.BufferLocation =
+            m_allocation->GetResource()->GetGPUVirtualAddress();
+        cbv_desc.SizeInBytes = m_allocation->GetSize();
+
+        m_context.device->CreateConstantBufferView(
+            &cbv_desc, {m_context.descriptor_heaps[CBV_SRV_UAV]
+                    ->gpu_heap->GetCPUDescriptorHandleForHeapStart().ptr +
+                cpu_handle * m_context.descriptor_heaps[CBV_SRV_UAV]->descriptor_size});
+
+    } else if ((buffer_create_info.descriptor_types &
+                DescriptorType::DESCRIPTOR_TYPE_BUFFER) ==
+               DescriptorType::DESCRIPTOR_TYPE_BUFFER) {
+        //D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc;
+
+    }
+
+
 }
 
 Buffer::~Buffer() noexcept { m_allocation->Release(); }

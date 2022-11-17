@@ -17,6 +17,7 @@ Pipeline::Pipeline(const RendererContext &context,
     m_create_info.type = PipelineType::GRAPHICS;
     m_create_info.gpci =
         const_cast<GraphicsPipelineCreateInfo *>(std::move(&create_info));
+    m_type = PipelineType::GRAPHICS;
 }
 Pipeline::Pipeline(const RendererContext &context,
                    const ComputePipelineCreateInfo &create_info,
@@ -25,6 +26,7 @@ Pipeline::Pipeline(const RendererContext &context,
     m_create_info.type = PipelineType::COMPUTE;
     m_create_info.cpci =
         const_cast<ComputePipelineCreateInfo *>(std::move(&create_info));
+    m_type = PipelineType::COMPUTE;
 }
 Pipeline::~Pipeline() noexcept {}
 
@@ -161,11 +163,11 @@ Shader::Shader(const RendererContext &context, ShaderType type,
 
     compile_args.emplace_back(wep.c_str());
     compile_args.emplace_back(wtp.c_str());
-
+    compile_args.emplace_back(L"-Od");
     // compile
     IDxcResult *compile_result;
     CHECK_DX_RESULT(context.dxc_compiler->Compile(
-        &source_buffer, compile_args.data(), compile_args.size(), nullptr,
+        &source_buffer, compile_args.data(), static_cast<u32>(compile_args.size()), nullptr,
         IID_PPV_ARGS(&compile_result)));
     IDxcBlobUtf8 *error_msg;
     compile_result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&error_msg),
@@ -194,40 +196,50 @@ Shader::Shader(const RendererContext &context, ShaderType type,
 Shader::~Shader() noexcept {}
 
 DescriptorSetAllocator::DescriptorSetAllocator(
-    const RendererContext &context) noexcept
+    RendererContext &context) noexcept
     : m_context(context) {
 
-    descriptor_heaps[RTV].max_descriptor_count = 8;
-    descriptor_heaps[RTV].type = RTV;
-    descriptor_heaps[CBV_SRV_UAV].max_descriptor_count = 8192;
-    descriptor_heaps[CBV_SRV_UAV].type = CBV_SRV_UAV;
-    descriptor_heaps[SAMPLER].max_descriptor_count = 128;
-    descriptor_heaps[SAMPLER].type = SAMPLER;
+    for (auto &heap : m_context.descriptor_heaps) {
+        heap = Memory::Alloc<DescriptorHeap>();
+    }
 
-    for (auto &heap : descriptor_heaps) {
+    m_context.descriptor_heaps[RTV]->max_descriptor_count = 8;
+    m_context.descriptor_heaps[RTV]->type = RTV;
+    m_context.descriptor_heaps[CBV_SRV_UAV]->max_descriptor_count = 2048;
+    m_context.descriptor_heaps[CBV_SRV_UAV]->type = CBV_SRV_UAV;
+    m_context.descriptor_heaps[SAMPLER]->max_descriptor_count = 128;
+    m_context.descriptor_heaps[SAMPLER]->type = SAMPLER;
+
+    for (auto &heap : m_context.descriptor_heaps) {
         // Describe and create a render target view (RTV) descriptor heap.
-        auto heap_type = ToDxDescriptorHeapType(heap.type);
+        auto heap_type = ToDxDescriptorHeapType(heap->type);
         bool b_shader_visble =
-            (heap.type == CBV_SRV_UAV) || (heap.type == SAMPLER);
+            (heap->type == CBV_SRV_UAV) || (heap->type == SAMPLER);
         D3D12_DESCRIPTOR_HEAP_DESC heap_desc = {};
-        heap_desc.NumDescriptors = heap.max_descriptor_count;
+        heap_desc.NumDescriptors = heap->max_descriptor_count;
         heap_desc.Type = heap_type;
         heap_desc.Flags = b_shader_visble
                               ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
                               : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
         CHECK_DX_RESULT(m_context.device->CreateDescriptorHeap(
-            &heap_desc, IID_PPV_ARGS(&heap.gpu_heap)));
-        heap.descriptor_size =
+            &heap_desc, IID_PPV_ARGS(&heap->gpu_heap)));
+        heap->descriptor_size =
             m_context.device->GetDescriptorHandleIncrementSize(heap_type);
-        heap.cpu_handle = heap.gpu_heap->GetCPUDescriptorHandleForHeapStart();
-        heap.gpu_handle =
+        heap->cpu_handle = heap->gpu_heap->GetCPUDescriptorHandleForHeapStart();
+        heap->gpu_handle =
             b_shader_visble
-                ? heap.gpu_heap->GetGPUDescriptorHandleForHeapStart()
+                ? heap->gpu_heap->GetGPUDescriptorHandleForHeapStart()
                 : CD3DX12_GPU_DESCRIPTOR_HANDLE{};
     }
     
 
+}
+
+DescriptorSetAllocator::~DescriptorSetAllocator() noexcept {
+    for (auto &heap : m_context.descriptor_heaps) {
+        Memory::Free(heap);
+    }
 }
 
 } // namespace Fract

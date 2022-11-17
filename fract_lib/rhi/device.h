@@ -43,12 +43,6 @@ namespace Fract {
 //// App resources.
 // ComPtr<ID3D12Resource> m_vertexBuffer;
 // D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-//
-//// Synchronization objects.
-// UINT m_frameIndex;
-// HANDLE m_fenceEvent;
-// ComPtr<ID3D12Fence> m_fence;
-// UINT64 m_fenceValue;
 
 
 
@@ -109,7 +103,7 @@ class Device {
     void AcquireNextFrame(SwapChain *swap_chain);
   private:
     Fence *GetFence(CommandQueueType type);
-  private:
+  public:
     RendererContext render_context{};
     DescriptorSetAllocator *descriptor_set_allocator{};
 

@@ -20,13 +20,31 @@ int main() {
         device.CreateSwapChain(SwapChainCreateInfo{2}, window);
 
     Shader *cs = device.CreateShader(ShaderType::COMPUTE_SHADER, 0,
-                                     "C:/FILES/Ori/data/test.comp.hlsl");
+                                     "C:/Fract/data/test.comp.hlsl");
     Pipeline *compute_pass =
         device.CreateComputePipeline(ComputePipelineCreateInfo{});
     compute_pass->SetComputeShader(cs);
     // compute_pass->GetDescriptorSet();
 
     Texture *render_target = device.CreateTexture(TextureCreateInfo{DescriptorType::DESCRIPTOR_TYPE_RW_TEXTURE,ResourceState::RESOURCE_STATE_RENDER_TARGET,TextureType::TEXTURE_TYPE_2D,TextureFormat::TEXTURE_FORMAT_RGBA8_UNORM,width, height});
+    Buffer *cb = device.CreateBuffer(
+        BufferCreateInfo{DescriptorType::DESCRIPTOR_TYPE_CONSTANT_BUFFER,
+                         ResourceState::RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, 16},MemoryFlag::CPU_VISABLE_MEMORY);
+
+
+    f32 cb_data[4] = {1,2,3,4};
+
+    UINT8 *data{};
+
+    // Map and initialize the constant buffer. We don't unmap this until the
+    // app closes. Keeping things mapped for the lifetime of the resource is
+    // okay.
+    CD3DX12_RANGE readRange(
+        0, 0); // We do not intend to read from this resource on the CPU.
+    CHECK_DX_RESULT(cb->GetResource()->Map(0, &readRange,
+                                           reinterpret_cast<void **>(&data)));
+    memcpy(data, &cb_data, sizeof(16));
+    cb->GetResource()->Unmap(0, nullptr);
 
     while (!window->ShouldClose()) {
         glfwPollEvents();

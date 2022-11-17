@@ -15,21 +15,11 @@
 #include <D3D12MemAlloc.h>
 
 #include "../utils/defination.h"
+#include "../utils/math/Math.h"
+#include "../utils/container/Container.h"
 #include "../utils/log/log.h"
 
 namespace Fract {
-
-struct RendererContext {
-    ID3D12Device *device;
-    IDXGIFactory6 *factory;
-    IDXGIAdapter4 *active_gpu;
-    D3D12MA::Allocator *d3dma_allocator;
-    // ID3D12CommandQueue *graphics_queue, *compute_queue, *transfer_queue;
-    Container::FixedArray<ID3D12CommandQueue *, 3> queues;
-    IDXGISwapChain3 *swap_chain;
-    IDxcUtils *dxc_utils;
-    IDxcCompiler3 *dxc_compiler;
-};
 
 // definations
 
@@ -773,5 +763,20 @@ enum DescriptorHeapType { RTV, CBV_SRV_UAV, SAMPLER };
          break;
      }
  }
+
+ 
+struct RendererContext {
+     ID3D12Device *device;
+     IDXGIFactory6 *factory;
+     IDXGIAdapter4 *active_gpu;
+     D3D12MA::Allocator *d3dma_allocator;
+     // ID3D12CommandQueue *graphics_queue, *compute_queue, *transfer_queue;
+     Container::FixedArray<ID3D12CommandQueue *, 3> queues;
+     IDXGISwapChain3 *swap_chain;
+     IDxcUtils *dxc_utils;
+     IDxcCompiler3 *dxc_compiler;
+     Container::FixedArray<DescriptorHeap *, 3> descriptor_heaps;
+ };
+
 
  } // namespace Fract

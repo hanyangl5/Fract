@@ -10,6 +10,8 @@
 
 #include <string>
 
+//#include <d3d12sdklayers.h>
+
 #include <utils/log/log.h>
 
 namespace Fract {
@@ -25,6 +27,7 @@ void Device::Initialize() {
     CreateDevice();
     InitializeD3DMA();
     CreateShaderCompiler();
+
     descriptor_set_allocator =
         Memory::Alloc<DescriptorSetAllocator>(render_context);
 }
@@ -43,6 +46,13 @@ void Device::CreateFactory() noexcept {
         // Enable additional debug layers.
         dxgi_factory_flags |= DXGI_CREATE_FACTORY_DEBUG;
     }
+    ID3D12Debug* spDebugController0;
+    ID3D12Debug1* spDebugController1;
+    CHECK_DX_RESULT(D3D12GetDebugInterface(IID_PPV_ARGS(&spDebugController0)));
+    CHECK_DX_RESULT(
+        spDebugController0->QueryInterface(IID_PPV_ARGS(&spDebugController1)));
+    spDebugController1->SetEnableGPUBasedValidation(true);
+
 #endif
     CHECK_DX_RESULT(CreateDXGIFactory2(dxgi_factory_flags,
                                        IID_PPV_ARGS(&render_context.factory)));

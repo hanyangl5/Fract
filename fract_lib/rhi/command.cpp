@@ -14,12 +14,35 @@ CommandList::CommandList(const RendererContext &context, CommandQueueType type,
                          ID3D12CommandAllocator *allocator,
                          ID3D12GraphicsCommandList *command_list) noexcept
     : gpu_command_list(command_list), m_type(type),
-      command_allocator(allocator) {}
+      command_allocator(allocator), m_context(context),
+      descriptor_set_allocator(descriptor_set_allocator) {}
 
 CommandList::~CommandList() noexcept {}
 
 void CommandList::BeginRecording() {
     gpu_command_list->Reset(command_allocator, nullptr);
+
+    //	if (m_type != CommandQueueType::TRANSFER) {
+    //    ID3D12DescriptorHeap *heaps[] = {
+    //        descriptor_set_allocator.get(DescriptorHeapType::CBV_SRV_UAV)
+    //            .gpu_heap,
+    //        descriptor_set_allocator.get(DescriptorHeapType::SAMPLER).gpu_heap};
+    //    gpu_command_list->SetDescriptorHeaps(2, heaps);
+
+    //    //pCmd->mD3D12.mBoundHeapStartHandles[0] =
+    //    //    pCmd->mD3D12.pBoundHeaps[0]
+    //    //        ->pHeap->GetGPUDescriptorHandleForHeapStart();
+    //    //pCmd->mD3D12.mBoundHeapStartHandles[1] =
+    //    //    pCmd->mD3D12.pBoundHeaps[1]
+    //    //        ->pHeap->GetGPUDescriptorHandleForHeapStart();
+    //}
+
+    // Reset CPU side data
+    //pCmd->mD3D12.pBoundRootSignature = NULL;
+    //for (uint32_t i = 0; i < DESCRIPTOR_UPDATE_FREQ_COUNT; ++i) {
+    //    pCmd->mD3D12.pBoundDescriptorSets[i] = NULL;
+    //    pCmd->mD3D12.mBoundDescriptorSetIndices[i] = -1;
+    //}
 }
 
 void CommandList::EndRecording() { gpu_command_list->Close(); }
@@ -68,7 +91,7 @@ CommandList *CommandContext::GetCommandList(CommandQueueType type) {
         CHECK_DX_RESULT(m_context.device->CreateCommandList(
             0, command_list_type, m_command_allocators[type], nullptr,
             IID_PPV_ARGS(&dx_command_list)));
-
+        dx_command_list->Close();
         auto cmd = Memory::Alloc<CommandList>(
             m_context, type, m_command_allocators[type], dx_command_list);
 
@@ -76,7 +99,9 @@ CommandList *CommandContext::GetCommandList(CommandQueueType type) {
     }
 
     m_command_lists_count[type]++;
-    return m_command_lists[type][count];
+    auto ret = m_command_lists[type][count];
+    ret->get()->Close();
+    return ret;
 }
 
 void CommandContext::Reset() {
@@ -132,10 +157,75 @@ void CommandList::InsertBarrier(const BarrierDesc &desc) {
 
 void CommandList::BindPipeline(Pipeline *pipeline) {
     gpu_command_list->SetPipelineState(pipeline->get());
+
+     //TODO(hylu) remove  this
+        if (m_type != CommandQueueType::TRANSFER) {
+        Container::FixedArray<ID3D12DescriptorHeap *, 2> heaps{
+                m_context.descriptor_heaps[CBV_SRV_UAV]->
+                gpu_heap,
+                m_context.descriptor_heaps[SAMPLER]->gpu_heap};
+        gpu_command_list->SetDescriptorHeaps(heaps.size(), heaps.data());
+    }
+
+    if (pipeline->GetType() == PipelineType::GRAPHICS) {
+        gpu_command_list->SetGraphicsRootSignature(
+            pipeline->get_root_signature());
+    } else if (pipeline->GetType() == PipelineType::COMPUTE) {
+        gpu_command_list->SetComputeRootSignature(
+            pipeline->get_root_signature());
+        gpu_command_list->SetComputeRootDescriptorTable(
+            0,
+            m_context.descriptor_heaps[CBV_SRV_UAV]->gpu_handle);
+    }
 }
 
 void CommandList::BindDescriptorSets(Pipeline *pipeline, DescriptorSet *set) {
+    if (m_type != CommandQueueType::TRANSFER) {
+        Container::FixedArray<ID3D12DescriptorHeap *, 2> heaps{
+            m_context.descriptor_heaps[CBV_SRV_UAV]->gpu_heap,
+            m_context.descriptor_heaps[SAMPLER]->gpu_heap};
+        gpu_command_list->SetDescriptorHeaps(heaps.size(), heaps.data());
+    }
 
+    // pCmd->mD3D12.mBoundHeapStartHandles[0] =
+    //     pCmd->mD3D12.pBoundHeaps[0]
+    //         ->pHeap->GetGPUDescriptorHandleForHeapStart();
+    // pCmd->mD3D12.mBoundHeapStartHandles[1] =
+    //     pCmd->mD3D12.pBoundHeaps[1]
+    //         ->pHeap->GetGPUDescriptorHandleForHeapStart();
+
+    //CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(
+    //    descriptor_set_allocator.get(DescriptorHeapType::CBV_SRV_UAV).gpu_handle,
+    //    srvIndex + threadIndex, m_srvUavDescriptorSize);
+
+    //CD3DX12_GPU_DESCRIPTOR_HANDLE uavHandle(
+    //    m_srvUavHeap->GetGPUDescriptorHandleForHeapStart(),
+    //    uavIndex + threadIndex, m_srvUavDescriptorSize);
+
+    //pCommandList->SetComputeRootConstantBufferView(
+    //    ComputeRootCBV, m_constantBufferCS->GetGPUVirtualAddress());
+    //m_commandList->SetGraphicsRootDescriptorTable(
+    //    0, m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
+    if(m_type == CommandQueueType::COMPUTE) {
+        gpu_command_list->SetComputeRootDescriptorTable(
+            0, m_context.descriptor_heaps[CBV_SRV_UAV]
+                   ->gpu_handle);
+
+    }
+    //   ID3D12DescriptorHeap *ppHeaps[] = {m_srvUavHeap.Get()};
+    //pCommandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
+    //CD3DX12_GPU_DESCRIPTOR_HANDLE srvHandle(
+    //    m_srvUavHeap->GetGPUDescriptorHandleForHeapStart(),
+    //    srvIndex + threadIndex, m_srvUavDescriptorSize);
+    //CD3DX12_GPU_DESCRIPTOR_HANDLE uavHandle(
+    //    m_srvUavHeap->GetGPUDescriptorHandleForHeapStart(),
+    //    uavIndex + threadIndex, m_srvUavDescriptorSize);
+
+    //pCommandList->SetComputeRootConstantBufferView(
+    //    ComputeRootCBV, m_constantBufferCS->GetGPUVirtualAddress());
+    //pCommandList->SetComputeRootDescriptorTable(ComputeRootSRVTable, srvHandle);
+    //pCommandList->SetComputeRootDescriptorTable(ComputeRootUAVTable, uavHandle);
 
     //// Set root signature if the current one differs from pRootSignature
     //reset_root_signature(
@@ -195,6 +285,23 @@ void CommandList::BindDescriptorSets(Pipeline *pipeline, DescriptorSet *set) {
     //                    pDescriptorSet->mD3D12.mSamplerHandle +
     //                        index * pDescriptorSet->mD3D12.mSamplerStride));
     //        }
+    //    }
+    //}
+}
+
+void CommandList::reset_root_signature(ID3D12RootSignature *rs,
+                                       PipelineType type) {
+    // Set root signature if the current one differs from pRootSignature
+    //if (pCmd->mD3D12.pBoundRootSignature != pRootSignature) {
+    //    pCmd->mD3D12.pBoundRootSignature = pRootSignature;
+    //    if (type == PIPELINE_TYPE_GRAPHICS)
+    //        pCmd->mD3D12.pDxCmdList->SetGraphicsRootSignature(pRootSignature);
+    //    else
+    //        pCmd->mD3D12.pDxCmdList->SetComputeRootSignature(pRootSignature);
+
+    //    for (uint32_t i = 0; i < DESCRIPTOR_UPDATE_FREQ_COUNT; ++i) {
+    //        pCmd->mD3D12.pBoundDescriptorSets[i] = NULL;
+    //        pCmd->mD3D12.mBoundDescriptorSetIndices[i] = -1;
     //    }
     //}
 }

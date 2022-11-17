@@ -24,7 +24,7 @@ class Buffer {
            MemoryFlag memory_flag) noexcept;
     ~Buffer() noexcept;
 
-    inline void *GetResource() const noexcept {
+    ID3D12Resource *GetResource() const noexcept {
         return m_allocation->GetResource();
     };
 
@@ -36,6 +36,7 @@ class Buffer {
   private:
     const RendererContext &m_context{};
     D3D12MA::Allocation *m_allocation{};
+    u32 cpu_handle{};
 };
 
 class Texture {
