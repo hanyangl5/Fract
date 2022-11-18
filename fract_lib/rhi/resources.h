@@ -32,7 +32,7 @@ class Buffer {
     DescriptorTypes m_descriptor_types{};
     ResourceState m_resource_state{};
     u64 m_size{};
-
+    Buffer *m_stage_buffer{};
   private:
     const RendererContext &m_context{};
     D3D12MA::Allocation *m_allocation{};

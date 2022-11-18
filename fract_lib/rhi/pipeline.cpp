@@ -61,13 +61,15 @@ void Pipeline::CreateRootSignature() {
         // greater than this.
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
-        CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
-        CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+        Container::FixedArray<CD3DX12_DESCRIPTOR_RANGE1, 2> ranges{};
+        Container::FixedArray<CD3DX12_ROOT_PARAMETER1, 1> rootParameters;
 
         ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0,
                        D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-        rootParameters[0].InitAsDescriptorTable(1, &ranges[0],
-                                                D3D12_SHADER_VISIBILITY_VERTEX);
+        ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0,
+                       D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
+        rootParameters[0].InitAsDescriptorTable(2, ranges.data(),
+                                                D3D12_SHADER_VISIBILITY_ALL);
 
         // Allow input layout and deny uneccessary access to certain pipeline
         // stages.
@@ -79,7 +81,8 @@ void Pipeline::CreateRootSignature() {
             D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 
         CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-        rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0,
+        rootSignatureDesc.Init_1_1(rootParameters.size(), rootParameters.data(),
+                                   0,
                                    nullptr, rootSignatureFlags);
         //rootSignatureDesc.Init_1_1(0, nullptr, 0,
         //                           nullptr, rootSignatureFlags);
@@ -203,11 +206,11 @@ DescriptorSetAllocator::DescriptorSetAllocator(
         heap = Memory::Alloc<DescriptorHeap>();
     }
 
-    m_context.descriptor_heaps[RTV]->max_descriptor_count = 8;
+    m_context.descriptor_heaps[RTV]->max_descriptor_count = 1;
     m_context.descriptor_heaps[RTV]->type = RTV;
-    m_context.descriptor_heaps[CBV_SRV_UAV]->max_descriptor_count = 2048;
+    m_context.descriptor_heaps[CBV_SRV_UAV]->max_descriptor_count = 2;
     m_context.descriptor_heaps[CBV_SRV_UAV]->type = CBV_SRV_UAV;
-    m_context.descriptor_heaps[SAMPLER]->max_descriptor_count = 128;
+    m_context.descriptor_heaps[SAMPLER]->max_descriptor_count = 1;
     m_context.descriptor_heaps[SAMPLER]->type = SAMPLER;
 
     for (auto &heap : m_context.descriptor_heaps) {

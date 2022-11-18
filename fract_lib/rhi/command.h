@@ -89,7 +89,7 @@ class CommandList {
     void BindDescriptorSets(Pipeline *pipeline, DescriptorSet *set);
 
     void GenerateMipMap(Texture *texture, bool alllevels = true);
-
+    Buffer* GetStageBuffer(const BufferCreateInfo &buffer_create_info);
   public:
     ID3D12GraphicsCommandList *get() const noexcept { return gpu_command_list; }
 

@@ -100,7 +100,6 @@ CommandList *CommandContext::GetCommandList(CommandQueueType type) {
 
     m_command_lists_count[type]++;
     auto ret = m_command_lists[type][count];
-    ret->get()->Close();
     return ret;
 }
 
@@ -135,6 +134,39 @@ void CommandList::DrawIndexedInstanced(u32 index_count, u32 first_index,
 void CommandList::Dispatch(u32 group_count_x, u32 group_count_y,
                            u32 group_count_z) {
     gpu_command_list->Dispatch(group_count_x, group_count_y, group_count_z);
+}
+
+void CommandList::UpdateBuffer(Buffer *buffer, void *data, u64 size) {
+
+    if (!buffer->m_stage_buffer)
+        buffer->m_stage_buffer = Memory::Alloc<Buffer>(
+            m_context,
+            BufferCreateInfo{DescriptorType::DESCRIPTOR_TYPE_UNDEFINED,
+                             ResourceState::RESOURCE_STATE_COPY_SOURCE,
+                             buffer->m_size},
+            MemoryFlag::CPU_VISABLE_MEMORY);
+
+    const auto &stage_resource = buffer->m_stage_buffer->GetResource();
+
+    void *mapped_data{};
+    CHECK_DX_RESULT(stage_resource->Map(0, nullptr, &mapped_data));
+    memcpy(mapped_data, data, size);
+    stage_resource->Unmap(0, nullptr);
+
+    // barrier for stage upload
+    {
+        // BufferBarrierDesc bmb{};
+        // bmb.buffer = vk_buffer->m_stage_buffer;
+        // bmb.src_state = RESOURCE_STATE_HOST_WRITE;
+        // bmb.dst_state = RESOURCE_STATE_COPY_SOURCE;
+
+        // BarrierDesc desc{};
+
+        // desc.buffer_memory_barriers.emplace_back(bmb);
+        // InsertBarrier(desc);
+    }
+
+    gpu_command_list->CopyResource(buffer->GetResource(), stage_resource);
 }
 
 void CommandList::InsertBarrier(const BarrierDesc &desc) {
@@ -287,6 +319,12 @@ void CommandList::BindDescriptorSets(Pipeline *pipeline, DescriptorSet *set) {
     //        }
     //    }
     //}
+}
+
+Buffer *
+Fract::CommandList::GetStageBuffer(const BufferCreateInfo &buffer_create_info) {
+    return Memory::Alloc<Buffer>(m_context, buffer_create_info,
+                                       MemoryFlag::CPU_VISABLE_MEMORY);
 }
 
 void CommandList::reset_root_signature(ID3D12RootSignature *rs,

@@ -25,7 +25,7 @@ Buffer::Buffer(const RendererContext &render_context,
     auto _buffer_create_info = CD3DX12_RESOURCE_DESC::Buffer(
         buffer_create_info.size, usage,
         0);
-    
+    _buffer_create_info.Dimension;
     D3D12MA::ALLOCATION_DESC allocation_desc{};
     D3D12_RESOURCE_STATES initial_state{};
     if (memory_flag == MemoryFlag::CPU_VISABLE_MEMORY) {
@@ -33,7 +33,7 @@ Buffer::Buffer(const RendererContext &render_context,
         initial_state = D3D12_RESOURCE_STATE_GENERIC_READ;
     } else if (memory_flag == MemoryFlag::DEDICATE_GPU_MEMORY) {
         allocation_desc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-        initial_state = D3D12_RESOURCE_STATE_COMMON;
+        initial_state = D3D12_RESOURCE_STATE_COPY_DEST;
     }
 
     CHECK_DX_RESULT(render_context.d3dma_allocator->CreateResource(
@@ -47,17 +47,41 @@ Buffer::Buffer(const RendererContext &render_context,
         D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
         cbv_desc.BufferLocation =
             m_allocation->GetResource()->GetGPUVirtualAddress();
-        cbv_desc.SizeInBytes = m_allocation->GetSize();
+        cbv_desc.SizeInBytes = (m_size + 255) / 256 * 256;
 
-        m_context.device->CreateConstantBufferView(
-            &cbv_desc, {m_context.descriptor_heaps[CBV_SRV_UAV]
-                    ->gpu_heap->GetCPUDescriptorHandleForHeapStart().ptr +
-                cpu_handle * m_context.descriptor_heaps[CBV_SRV_UAV]->descriptor_size});
+        D3D12_CPU_DESCRIPTOR_HANDLE descriptor_cpu_handle{
+            m_context.descriptor_heaps[CBV_SRV_UAV]->cpu_handle.ptr +
+            cpu_handle *
+                m_context.descriptor_heaps[CBV_SRV_UAV]->descriptor_size};
+
+        m_context.device->CreateConstantBufferView(&cbv_desc,
+                                                   descriptor_cpu_handle);
 
     } else if ((buffer_create_info.descriptor_types &
                 DescriptorType::DESCRIPTOR_TYPE_BUFFER) ==
                DescriptorType::DESCRIPTOR_TYPE_BUFFER) {
         //D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc;
+
+    } else if ((buffer_create_info.descriptor_types &
+                DescriptorType::DESCRIPTOR_TYPE_RW_BUFFER) ==
+               DescriptorType::DESCRIPTOR_TYPE_RW_BUFFER) {
+        D3D12_UNORDERED_ACCESS_VIEW_DESC
+            uav_desc{};
+        uav_desc.Format = DXGI_FORMAT_UNKNOWN;
+        uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+        uav_desc.Buffer.FirstElement = 0;
+        uav_desc.Buffer.NumElements = 1;
+        uav_desc.Buffer.StructureByteStride = 32;
+        uav_desc.Buffer.CounterOffsetInBytes = 0;
+        uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+        D3D12_CPU_DESCRIPTOR_HANDLE descriptor_cpu_handle{
+            m_context.descriptor_heaps[CBV_SRV_UAV]->cpu_handle.ptr +
+            1 *
+                m_context.descriptor_heaps[CBV_SRV_UAV]->descriptor_size};
+
+        m_context.device->CreateUnorderedAccessView(
+            m_allocation->GetResource(), nullptr, &uav_desc,
+                                                   descriptor_cpu_handle);
 
     }
 
