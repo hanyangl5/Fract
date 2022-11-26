@@ -53,6 +53,21 @@ class DescriptorSet {
 
 class DescriptorSetAllocator {
   public:
+    DescriptorSetAllocator(RendererContext &context) noexcept;
+    ~DescriptorSetAllocator() noexcept;
+  private:
+
+    RendererContext &m_context;
+
+    static constexpr u32 descriptor_type_count = 3;
+
+    //const u32 k_rtv_descriptor_count = 64;
+    //const u32 k_srvuav_descriptor_count = 8192;
+    //const u32 k_sampler_descriptor_count = 8192;
+
+    //ID3D12DescriptorHeap *m_rtv_descriptor_heap;
+    //ID3D12DescriptorHeap *m_srvuav_descriptor_heap;
+    //ID3D12DescriptorHeap *m_sampler_descriptor_heap;
 };
 
 class Shader {
@@ -65,21 +80,21 @@ class Shader {
     Shader(Shader &&rhs) noexcept = delete;
     Shader &operator=(Shader &&rhs) noexcept = delete;
 
-    ShaderType GetType() const noexcept;
+    ShaderType GetType() const noexcept { return m_type; };
 
-    ID3DBlob *get() const noexcept { return fxc_blob; }
+    IDxcBlob *get() const noexcept { return shader_blob; }
 
     const std::filesystem::path &
     GetRootSignatureDescriptionPath() const noexcept {
         return m_rsd_path;
     }
 
-  protected:
+  private:
     const RendererContext &m_context;
     const ShaderType m_type{};
     const std::filesystem::path m_rsd_path; // lazy read
     IDxcBlob *shader_blob{};
-    ID3DBlob* fxc_blob{};
+    //ID3DBlob* fxc_blob{};
 };
 
 class Pipeline {
@@ -99,7 +114,7 @@ class Pipeline {
     Pipeline(Pipeline &&rhs) noexcept = delete;
     Pipeline &operator=(Pipeline &&rhs) noexcept = delete;
 
-    PipelineType GetType() const noexcept;
+    PipelineType GetType() const noexcept { return m_type; }
 
     void SetComputeShader(Shader *vs);
     void SetGraphicsShader(Shader *vs, Shader *ps);
@@ -109,7 +124,9 @@ class Pipeline {
     DescriptorSet *GetBindlessDescriptorSet(ResourceUpdateFrequency frequency);
 
     ID3D12PipelineState *get() const noexcept { return gpu_pipeline; }
-
+    ID3D12RootSignature *get_root_signature() const noexcept {
+        return root_signature;
+    }
   private:
     void CreateGraphicsPipeline();
     void CreateComputePipeline();
@@ -118,7 +135,8 @@ class Pipeline {
     void ParseRootSignatureFromShader(Shader *shader);
 
     const RendererContext &m_context;
-
+    PipelineType m_type;
+    // const DescriptorSetAllocator &descriptor_set_allocator;
     // array contain all kinds of shaders
     Shader *m_vs{}, *m_ps{}, *m_cs{};
     PipelineCreateInfo m_create_info{};

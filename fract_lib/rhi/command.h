@@ -34,7 +34,8 @@ struct RenderPassBeginInfo {
 
 class CommandList {
   public:
-    CommandList(const RendererContext &context, CommandQueueType type,
+    CommandList(const RendererContext &context,
+                    CommandQueueType type,
                 ID3D12CommandAllocator *allocator,
                 ID3D12GraphicsCommandList *command_list) noexcept;
 
@@ -88,11 +89,15 @@ class CommandList {
     void BindDescriptorSets(Pipeline *pipeline, DescriptorSet *set);
 
     void GenerateMipMap(Texture *texture, bool alllevels = true);
-
+    Buffer* GetStageBuffer(const BufferCreateInfo &buffer_create_info);
   public:
     ID3D12GraphicsCommandList *get() const noexcept { return gpu_command_list; }
 
   private:
+    void reset_root_signature(ID3D12RootSignature *rs, PipelineType type);
+  private:
+    const RendererContext &m_context;
+    const DescriptorSetAllocator &descriptor_set_allocator;
     ID3D12CommandAllocator *command_allocator{};
     ID3D12GraphicsCommandList *gpu_command_list{};
     bool is_recoring{false};

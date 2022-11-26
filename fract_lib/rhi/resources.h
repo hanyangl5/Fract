@@ -24,7 +24,7 @@ class Buffer {
            MemoryFlag memory_flag) noexcept;
     ~Buffer() noexcept;
 
-    inline void *GetResource() const noexcept {
+    ID3D12Resource *GetResource() const noexcept {
         return m_allocation->GetResource();
     };
 
@@ -32,10 +32,11 @@ class Buffer {
     DescriptorTypes m_descriptor_types{};
     ResourceState m_resource_state{};
     u64 m_size{};
-
+    Buffer *m_stage_buffer{};
   private:
     const RendererContext &m_context{};
     D3D12MA::Allocation *m_allocation{};
+    u32 cpu_handle{};
 };
 
 class Texture {
@@ -46,12 +47,13 @@ class Texture {
 
   private:
     DescriptorTypes m_descriptor_types;
-    ResourceState m_state{};
+    ResourceState m_resource_state{};
     const TextureType m_type{};
     const TextureFormat m_format{};
 
     const u32 m_width{}, m_height{}, m_depth{};
     u32 mip_map_level{};
+    u32 array_layer;
     const u32 m_byte_per_pixel{};
 
     const RendererContext &m_context{};

@@ -15,21 +15,11 @@
 #include <D3D12MemAlloc.h>
 
 #include "../utils/defination.h"
+#include "../utils/math/Math.h"
+#include "../utils/container/Container.h"
 #include "../utils/log/log.h"
 
 namespace Fract {
-
-struct RendererContext {
-    ID3D12Device *device;
-    IDXGIFactory6 *factory;
-    IDXGIAdapter4 *active_gpu;
-    D3D12MA::Allocator *d3dma_allocator;
-    // ID3D12CommandQueue *graphics_queue, *compute_queue, *transfer_queue;
-    Container::FixedArray<ID3D12CommandQueue *, 3> queues;
-    IDXGISwapChain3 *swap_chain;
-    IDxcUtils *dxc_utils;
-    IDxcCompiler3 *dxc_compiler;
-};
 
 // definations
 
@@ -244,7 +234,7 @@ enum ResourceState {
     RESOURCE_STATE_HOST_WRITE = 0x20000
 };
 
-enum class MemoryFlag { DEDICATE_GPU_MEMORY, CPU_VISABLE_MEMORY };
+enum class MemoryFlag { GPU_ONLY, CPU_TO_GPU, GPU_TO_CPU };
 
 struct BufferCreateInfo {
     // u32 buffer_usage_flags;
@@ -744,4 +734,123 @@ enum QueueOp { IGNORED, RELEASE, ACQUIRE };
  //    return flags;
  //}
 
-} // namespace Fract
+ 
+enum DescriptorHeapType { RTV, CBV_SRV_UAV, SAMPLER };
+
+ struct DescriptorHeap {
+     ID3D12DescriptorHeap *gpu_heap;
+     u32 max_descriptor_count;
+     u32 descriptor_size;
+     DescriptorHeapType type;
+     CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_handle;
+     CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_handle;
+     u32 descriptor_offset;
+ };
+
+ inline D3D12_DESCRIPTOR_HEAP_TYPE
+ ToDxDescriptorHeapType(DescriptorHeapType type) {
+     switch (type) {
+     case Fract::RTV:
+         return D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+         break;
+     case Fract::CBV_SRV_UAV:
+         return D3D12_DESCRIPTOR_HEAP_TYPE::
+             D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+         break;
+     case Fract::SAMPLER:
+         return D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+         break;
+     default:
+         break;
+     }
+ }
+
+ 
+struct RendererContext {
+     ID3D12Device *device;
+     IDXGIFactory6 *factory;
+     IDXGIAdapter4 *active_gpu;
+     D3D12MA::Allocator *d3dma_allocator;
+     // ID3D12CommandQueue *graphics_queue, *compute_queue, *transfer_queue;
+     Container::FixedArray<ID3D12CommandQueue *, 3> queues;
+     IDXGISwapChain3 *swap_chain;
+     IDxcUtils *dxc_utils;
+     IDxcCompiler3 *dxc_compiler;
+     Container::FixedArray<DescriptorHeap *, 3> descriptor_heaps;
+     Container::FixedArray<u32, 3> descriptor_offset;
+};
+
+inline D3D12_RESOURCE_STATES ToDxResourceState(ResourceState state) {
+    switch (state) {
+    case Fract::RESOURCE_STATE_UNDEFINED:
+        break;
+    case Fract::RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER:
+        return D3D12_RESOURCE_STATES::
+            D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+        break;
+    case Fract::RESOURCE_STATE_INDEX_BUFFER:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_INDEX_BUFFER;
+        break;
+    case Fract::RESOURCE_STATE_RENDER_TARGET:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET;
+        break;
+    case Fract::RESOURCE_STATE_UNORDERED_ACCESS:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        break;
+    case Fract::RESOURCE_STATE_DEPTH_WRITE:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_DEPTH_WRITE;
+        break;
+    case Fract::RESOURCE_STATE_DEPTH_READ:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_DEPTH_READ;
+        break;
+    case Fract::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE:
+        return D3D12_RESOURCE_STATES::
+            D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        break;
+    case Fract::RESOURCE_STATE_PIXEL_SHADER_RESOURCE:
+        return D3D12_RESOURCE_STATES::
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        break;
+    case Fract::RESOURCE_STATE_SHADER_RESOURCE:
+        return D3D12_RESOURCE_STATES::
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        break;
+    case Fract::RESOURCE_STATE_STREAM_OUT:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_STREAM_OUT;
+        break;
+    case Fract::RESOURCE_STATE_INDIRECT_ARGUMENT:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+        break;
+    case Fract::RESOURCE_STATE_COPY_DEST:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST;
+        break;
+    case Fract::RESOURCE_STATE_COPY_SOURCE:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_SOURCE;
+        break;
+    case Fract::RESOURCE_STATE_GENERIC_READ:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_GENERIC_READ;
+        break;
+    case Fract::RESOURCE_STATE_PRESENT:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_PRESENT;
+        break;
+    case Fract::RESOURCE_STATE_COMMON:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON;
+        break;
+    case Fract::RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE:
+        return D3D12_RESOURCE_STATES::
+            D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+        break;
+    case Fract::RESOURCE_STATE_SHADING_RATE_SOURCE:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE;
+        break;
+    case Fract::RESOURCE_STATE_HOST_READ:
+        break;
+    case Fract::RESOURCE_STATE_HOST_WRITE:
+        break;
+    default:
+        break;
+    }
+    assert(false); // some resorucestate is not supported
+}
+
+ } // namespace Fract
