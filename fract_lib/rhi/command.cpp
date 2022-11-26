@@ -20,7 +20,7 @@ CommandList::CommandList(const RendererContext &context, CommandQueueType type,
 CommandList::~CommandList() noexcept {}
 
 void CommandList::BeginRecording() {
-    gpu_command_list->Reset(command_allocator, nullptr);
+    CHECK_DX_RESULT(gpu_command_list->Reset(command_allocator, nullptr));
 
     //	if (m_type != CommandQueueType::TRANSFER) {
     //    ID3D12DescriptorHeap *heaps[] = {
@@ -106,7 +106,7 @@ CommandList *CommandContext::GetCommandList(CommandQueueType type) {
 void CommandContext::Reset() {
     for (auto &allocator : m_command_allocators) {
         if (allocator) {
-            allocator->Reset();
+            CHECK_DX_RESULT(allocator->Reset());
             m_command_lists_count.fill(0);
         }
     }
@@ -138,13 +138,15 @@ void CommandList::Dispatch(u32 group_count_x, u32 group_count_y,
 
 void CommandList::UpdateBuffer(Buffer *buffer, void *data, u64 size) {
 
+
+
     if (!buffer->m_stage_buffer)
         buffer->m_stage_buffer = Memory::Alloc<Buffer>(
             m_context,
             BufferCreateInfo{DescriptorType::DESCRIPTOR_TYPE_UNDEFINED,
                              ResourceState::RESOURCE_STATE_COPY_SOURCE,
                              buffer->m_size},
-            MemoryFlag::CPU_VISABLE_MEMORY);
+            MemoryFlag::CPU_TO_GPU);
 
     const auto &stage_resource = buffer->m_stage_buffer->GetResource();
 
@@ -153,20 +155,19 @@ void CommandList::UpdateBuffer(Buffer *buffer, void *data, u64 size) {
     memcpy(mapped_data, data, size);
     stage_resource->Unmap(0, nullptr);
 
-    // barrier for stage upload
-    {
-        // BufferBarrierDesc bmb{};
-        // bmb.buffer = vk_buffer->m_stage_buffer;
-        // bmb.src_state = RESOURCE_STATE_HOST_WRITE;
-        // bmb.dst_state = RESOURCE_STATE_COPY_SOURCE;
-
-        // BarrierDesc desc{};
-
-        // desc.buffer_memory_barriers.emplace_back(bmb);
-        // InsertBarrier(desc);
-    }
-
     gpu_command_list->CopyResource(buffer->GetResource(), stage_resource);
+    ;
+    // TODO(hanyanglu): move outsize cmdlist
+    D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        buffer->GetResource(), D3D12_RESOURCE_STATE_COPY_DEST,
+        ToDxResourceState(buffer->m_resource_state));
+
+    gpu_command_list->ResourceBarrier(1, &barrier);
+//
+//        UpdateSubresources<1>(gpu_command_list, buffer->GetResource(),
+//                          constantBufferCSUpload.Get(), 0, 0, 1,
+//                          &computeCBData);
+//
 }
 
 void CommandList::InsertBarrier(const BarrierDesc &desc) {
@@ -176,7 +177,10 @@ void CommandList::InsertBarrier(const BarrierDesc &desc) {
                      desc.texture_memory_barriers.size());
 
     for (auto &buffer_barreir : desc.buffer_memory_barriers) {
-        D3D12_RESOURCE_BARRIER b{};
+        D3D12_RESOURCE_BARRIER b = CD3DX12_RESOURCE_BARRIER::Transition(
+            buffer_barreir.buffer->GetResource(),
+            ToDxResourceState(buffer_barreir.src_state),
+            ToDxResourceState(buffer_barreir.dst_state));
         barriers.push_back(b);
     }
     for (auto &texture_barreir : desc.texture_memory_barriers) {
@@ -192,10 +196,9 @@ void CommandList::BindPipeline(Pipeline *pipeline) {
 
      //TODO(hylu) remove  this
         if (m_type != CommandQueueType::TRANSFER) {
-        Container::FixedArray<ID3D12DescriptorHeap *, 2> heaps{
+        Container::FixedArray<ID3D12DescriptorHeap *, 1> heaps{
                 m_context.descriptor_heaps[CBV_SRV_UAV]->
-                gpu_heap,
-                m_context.descriptor_heaps[SAMPLER]->gpu_heap};
+                gpu_heap};
         gpu_command_list->SetDescriptorHeaps(heaps.size(), heaps.data());
     }
 
@@ -203,11 +206,22 @@ void CommandList::BindPipeline(Pipeline *pipeline) {
         gpu_command_list->SetGraphicsRootSignature(
             pipeline->get_root_signature());
     } else if (pipeline->GetType() == PipelineType::COMPUTE) {
+
         gpu_command_list->SetComputeRootSignature(
             pipeline->get_root_signature());
-        gpu_command_list->SetComputeRootDescriptorTable(
-            0,
-            m_context.descriptor_heaps[CBV_SRV_UAV]->gpu_handle);
+
+        CD3DX12_GPU_DESCRIPTOR_HANDLE cbvHandle(
+            m_context.descriptor_heaps[CBV_SRV_UAV]
+                ->gpu_heap->GetGPUDescriptorHandleForHeapStart(),
+            0, m_context.descriptor_heaps[CBV_SRV_UAV]->descriptor_size);
+
+        CD3DX12_GPU_DESCRIPTOR_HANDLE uavHandle(
+            m_context.descriptor_heaps[CBV_SRV_UAV]
+                ->gpu_heap->GetGPUDescriptorHandleForHeapStart(),
+            1, m_context.descriptor_heaps[CBV_SRV_UAV]->descriptor_size);
+
+        gpu_command_list->SetComputeRootDescriptorTable(0, cbvHandle);
+        gpu_command_list->SetComputeRootDescriptorTable(1, uavHandle);
     }
 }
 
@@ -324,7 +338,7 @@ void CommandList::BindDescriptorSets(Pipeline *pipeline, DescriptorSet *set) {
 Buffer *
 Fract::CommandList::GetStageBuffer(const BufferCreateInfo &buffer_create_info) {
     return Memory::Alloc<Buffer>(m_context, buffer_create_info,
-                                       MemoryFlag::CPU_VISABLE_MEMORY);
+                                       MemoryFlag::CPU_TO_GPU);
 }
 
 void CommandList::reset_root_signature(ID3D12RootSignature *rs,

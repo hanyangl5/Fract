@@ -22,18 +22,25 @@ Buffer::Buffer(const RendererContext &render_context,
     D3D12_RESOURCE_FLAGS usage{}; // TODO:
     // Alignment must be 64KB (D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT) or 0,
     // which is effectively 64KB.
-    auto _buffer_create_info = CD3DX12_RESOURCE_DESC::Buffer(
-        buffer_create_info.size, usage,
-        0);
-    _buffer_create_info.Dimension;
+    auto _buffer_create_info =
+        CD3DX12_RESOURCE_DESC::Buffer(buffer_create_info.size, usage, 0);
+    _buffer_create_info.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    if (m_resource_state == ResourceState::RESOURCE_STATE_UNORDERED_ACCESS) {
+        _buffer_create_info.Flags |=
+            D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS |
+            D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+    }
     D3D12MA::ALLOCATION_DESC allocation_desc{};
     D3D12_RESOURCE_STATES initial_state{};
-    if (memory_flag == MemoryFlag::CPU_VISABLE_MEMORY) {
+    if (memory_flag == MemoryFlag::CPU_TO_GPU) {
         allocation_desc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
         initial_state = D3D12_RESOURCE_STATE_GENERIC_READ;
-    } else if (memory_flag == MemoryFlag::DEDICATE_GPU_MEMORY) {
+    } else if (memory_flag == MemoryFlag::GPU_ONLY) {
         allocation_desc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
         initial_state = D3D12_RESOURCE_STATE_COPY_DEST;
+    } else if (memory_flag == MemoryFlag::GPU_TO_CPU) {
+        allocation_desc.HeapType = D3D12_HEAP_TYPE_READBACK;
+        initial_state = D3D12_RESOURCE_STATE_COPY_SOURCE;
     }
 
     CHECK_DX_RESULT(render_context.d3dma_allocator->CreateResource(
@@ -43,49 +50,46 @@ Buffer::Buffer(const RendererContext &render_context,
     if ((buffer_create_info.descriptor_types &
          DescriptorType::DESCRIPTOR_TYPE_CONSTANT_BUFFER) ==
         DescriptorType::DESCRIPTOR_TYPE_CONSTANT_BUFFER) {
-
+        assert((m_size % 256) == 0);
         D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
         cbv_desc.BufferLocation =
             m_allocation->GetResource()->GetGPUVirtualAddress();
-        cbv_desc.SizeInBytes = (m_size + 255) / 256 * 256;
+        cbv_desc.SizeInBytes = AlignUp(m_size, 256);
 
-        D3D12_CPU_DESCRIPTOR_HANDLE descriptor_cpu_handle{
-            m_context.descriptor_heaps[CBV_SRV_UAV]->cpu_handle.ptr +
-            cpu_handle *
-                m_context.descriptor_heaps[CBV_SRV_UAV]->descriptor_size};
+        auto &heap = m_context.descriptor_heaps[CBV_SRV_UAV];
 
-        m_context.device->CreateConstantBufferView(&cbv_desc,
-                                                   descriptor_cpu_handle);
+        CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_handle(
+            heap->cpu_handle, heap->descriptor_offset * heap->descriptor_size);
+
+        m_context.device->CreateConstantBufferView(&cbv_desc, cpu_handle);
+        heap->descriptor_offset++;
 
     } else if ((buffer_create_info.descriptor_types &
                 DescriptorType::DESCRIPTOR_TYPE_BUFFER) ==
                DescriptorType::DESCRIPTOR_TYPE_BUFFER) {
-        //D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc;
+        // D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc;
 
     } else if ((buffer_create_info.descriptor_types &
                 DescriptorType::DESCRIPTOR_TYPE_RW_BUFFER) ==
                DescriptorType::DESCRIPTOR_TYPE_RW_BUFFER) {
+
+        auto &heap = m_context.descriptor_heaps[CBV_SRV_UAV];
+
         D3D12_UNORDERED_ACCESS_VIEW_DESC
-            uav_desc{};
+        uav_desc{};
         uav_desc.Format = DXGI_FORMAT_UNKNOWN;
         uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
         uav_desc.Buffer.FirstElement = 0;
         uav_desc.Buffer.NumElements = 1;
-        uav_desc.Buffer.StructureByteStride = 32;
+        uav_desc.Buffer.StructureByteStride = 256;
         uav_desc.Buffer.CounterOffsetInBytes = 0;
         uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-        D3D12_CPU_DESCRIPTOR_HANDLE descriptor_cpu_handle{
-            m_context.descriptor_heaps[CBV_SRV_UAV]->cpu_handle.ptr +
-            1 *
-                m_context.descriptor_heaps[CBV_SRV_UAV]->descriptor_size};
-
+        CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_handle(
+            heap->cpu_handle, heap->descriptor_offset * heap->descriptor_size);
         m_context.device->CreateUnorderedAccessView(
-            m_allocation->GetResource(), nullptr, &uav_desc,
-                                                   descriptor_cpu_handle);
-
+            m_allocation->GetResource(), nullptr, &uav_desc, cpu_handle);
+        heap->descriptor_offset++;
     }
-
-
 }
 
 Buffer::~Buffer() noexcept { m_allocation->Release(); }
@@ -127,50 +131,76 @@ void SwapChain::AcquireNextFrame() noexcept {
 RenderTarget::RenderTarget(const RendererContext &context,
                            const RenderTargetCreateInfo &create_info) noexcept
     : m_context(context) {
-    //D3D12_RENDER_TARGET_VIEW_DESC desc{};
-    //CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
-    //    m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+    // D3D12_RENDER_TARGET_VIEW_DESC desc{};
+    // CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
+    //     m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
     // context.device->CreateRenderTargetView(gpu_render_target, );
 }
 
 Texture::Texture(const RendererContext &render_context,
                  const TextureCreateInfo &texture_create_info) noexcept
-    : m_context(render_context) {
-    mip_map_level = texture_create_info.enanble_mipmap == true
-                        ? Min(MAX_MIP_LEVEL,
-                                   static_cast<uint32_t>(std::floor(std::log2(
-                                       Max(m_width, m_height))))) +
-                              1
-                        : 1;
+    : m_context(render_context), m_width(texture_create_info.width),
+      m_height(texture_create_info.height),
+      m_type(texture_create_info.texture_type),
+      m_format(texture_create_info.texture_format) {
 
-    CD3DX12_RESOURCE_DESC _texture_create_info{};
-    _texture_create_info.Dimension =
-        ToDX12TextureDimension(texture_create_info.texture_type);
-    _texture_create_info.Format =
-        ToDx12TextureFormat(texture_create_info.texture_format);
-    _texture_create_info.Flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
+    mip_map_level =
+        texture_create_info.enanble_mipmap == true
+            ? Min(MAX_MIP_LEVEL, static_cast<uint32_t>(std::floor(
+                                     std::log2(Max(m_width, m_height))))) +
+                  1
+            : 1;
+
+    m_descriptor_types = texture_create_info.descriptor_types;
+    m_resource_state = texture_create_info.initial_state;
+
+    auto dxgi_format = ToDx12TextureFormat(m_format);
+
+    CD3DX12_RESOURCE_DESC _texture_create_info = CD3DX12_RESOURCE_DESC::Tex2D(
+        dxgi_format, m_width, m_height, texture_create_info.array_layer,
+        mip_map_level);
+
     if (texture_create_info.descriptor_types &
         DescriptorType::DESCRIPTOR_TYPE_RW_TEXTURE) {
         _texture_create_info.Flags |=
             D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
 
-    _texture_create_info.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    _texture_create_info.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-    _texture_create_info.Width = texture_create_info.width;
-    _texture_create_info.Height = texture_create_info.height;
-    _texture_create_info.DepthOrArraySize = texture_create_info.array_layer;
-    _texture_create_info.MipLevels = mip_map_level;
-    _texture_create_info.SampleDesc.Count = 1;
-    _texture_create_info.SampleDesc.Quality = 0;
-
     D3D12MA::ALLOCATION_DESC allocation_desc = {};
     allocation_desc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
     CHECK_DX_RESULT(m_context.d3dma_allocator->CreateResource(
-        &allocation_desc, &_texture_create_info, D3D12_RESOURCE_STATE_COPY_DEST,
+        &allocation_desc, &_texture_create_info, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, // TODO:
         nullptr, &m_allocation, IID_NULL, nullptr));
+    
+    auto &heap = m_context.descriptor_heaps[CBV_SRV_UAV];
+    if ((texture_create_info.descriptor_types &
+         DescriptorType::DESCRIPTOR_TYPE_TEXTURE) ==
+        DescriptorType::DESCRIPTOR_TYPE_TEXTURE) {
+
+        // CreateShaderResourceView();
+        // CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_handle(
+        //    heap->cpu_handle, heap->descriptor_offset *
+        //    heap->descriptor_size);
+        // heap->descriptor_offset++;
+
+    } else if ((texture_create_info.descriptor_types &
+                DescriptorType::DESCRIPTOR_TYPE_RW_TEXTURE) ==
+               DescriptorType::DESCRIPTOR_TYPE_RW_TEXTURE) {
+
+        D3D12_UNORDERED_ACCESS_VIEW_DESC
+        uav_desc{};
+        uav_desc.Format = dxgi_format;
+        uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+        uav_desc.Texture2D;
+
+        CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_handle(
+            heap->cpu_handle, heap->descriptor_offset * heap->descriptor_size);
+        m_context.device->CreateUnorderedAccessView(
+            m_allocation->GetResource(), nullptr, &uav_desc, cpu_handle);
+        heap->descriptor_offset++;
+    }
 }
 
 Fence::Fence(const RendererContext &context) noexcept : m_context(context) {

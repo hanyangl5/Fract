@@ -61,35 +61,44 @@ void Pipeline::CreateRootSignature() {
         // greater than this.
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
-        Container::FixedArray<CD3DX12_DESCRIPTOR_RANGE1, 2> ranges{};
-        Container::FixedArray<CD3DX12_ROOT_PARAMETER1, 1> rootParameters;
+        Container::FixedArray<CD3DX12_DESCRIPTOR_RANGE1, 3> ranges{};
+        Container::FixedArray<CD3DX12_ROOT_PARAMETER1, 2> rootParameters;
 
-        ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0,
-                       D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-        ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0,
-                       D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
-        rootParameters[0].InitAsDescriptorTable(2, ranges.data(),
-                                                D3D12_SHADER_VISIBILITY_ALL);
+        ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+        ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+        ranges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1);
+        
+            //rootParameters[0].InitAsConstantBufferView(
+            //    0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC,
+            //    D3D12_SHADER_VISIBILITY_ALL);
+            rootParameters[0].InitAsDescriptorTable(
+                1, &ranges[0], D3D12_SHADER_VISIBILITY_ALL);
+            rootParameters[1].InitAsDescriptorTable(
+                2, &ranges[1], D3D12_SHADER_VISIBILITY_ALL);
 
-        // Allow input layout and deny uneccessary access to certain pipeline
-        // stages.
-        D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-            D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+            CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC computeRootSignatureDesc;
+            computeRootSignatureDesc.Init_1_1(2, rootParameters.data(), 0,
+                                              nullptr);
 
-        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-        rootSignatureDesc.Init_1_1(rootParameters.size(), rootParameters.data(),
-                                   0,
-                                   nullptr, rootSignatureFlags);
-        //rootSignatureDesc.Init_1_1(0, nullptr, 0,
+
+        //// Allow input layout and deny uneccessary access to certain pipeline
+        //// stages.
+        //D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+        //    D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+        //    D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+        //    D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+        //    D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+        //    D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+
+        //CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+        //rootSignatureDesc.Init_1_1(rootParameters.size(), rootParameters.data(),
+        //                           0,
         //                           nullptr, rootSignatureFlags);
+
         ID3DBlob* signature;
         ID3DBlob* error;
         CHECK_DX_RESULT(D3DX12SerializeVersionedRootSignature(
-            &rootSignatureDesc, featureData.HighestVersion, &signature,
+            &computeRootSignatureDesc, featureData.HighestVersion, &signature,
             &error));
         if (error != nullptr && error->GetBufferSize() > 0) {
             LOG_ERROR("failed to compile shader: {}",
@@ -107,21 +116,6 @@ void Pipeline::CreateRootSignature() {
 Shader::Shader(const RendererContext &context, ShaderType type,
                const std::filesystem::path &file_name) noexcept
     : m_context(context) {
-
-    std::string s = file_name.string();
-
-
-    //ID3DBlob *error_msg1{};
-    //D3DCompileFromFile(std::wstring(s.begin(), s.end()).c_str(), nullptr,
-    //                   nullptr,
-    //                   "Main", "cs_5_0", 0, 0, &fxc_blob, &error_msg1);
-    //if (error_msg1 != nullptr && error_msg1->GetBufferSize() > 0) {
-    //    LOG_ERROR("failed to compile shader: {}",
-    //              std::string{(char *)error_msg1->GetBufferPointer(),
-    //                          error_msg1->GetBufferSize()});
-    //}
-    //return;
-    // read source file
     IDxcBlobEncoding *source_file = nullptr;
     auto str = file_name.string();
 
@@ -208,7 +202,7 @@ DescriptorSetAllocator::DescriptorSetAllocator(
 
     m_context.descriptor_heaps[RTV]->max_descriptor_count = 1;
     m_context.descriptor_heaps[RTV]->type = RTV;
-    m_context.descriptor_heaps[CBV_SRV_UAV]->max_descriptor_count = 2;
+    m_context.descriptor_heaps[CBV_SRV_UAV]->max_descriptor_count = 3;
     m_context.descriptor_heaps[CBV_SRV_UAV]->type = CBV_SRV_UAV;
     m_context.descriptor_heaps[SAMPLER]->max_descriptor_count = 1;
     m_context.descriptor_heaps[SAMPLER]->type = SAMPLER;

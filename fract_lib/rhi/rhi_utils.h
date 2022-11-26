@@ -234,7 +234,7 @@ enum ResourceState {
     RESOURCE_STATE_HOST_WRITE = 0x20000
 };
 
-enum class MemoryFlag { DEDICATE_GPU_MEMORY, CPU_VISABLE_MEMORY };
+enum class MemoryFlag { GPU_ONLY, CPU_TO_GPU, GPU_TO_CPU };
 
 struct BufferCreateInfo {
     // u32 buffer_usage_flags;
@@ -744,6 +744,7 @@ enum DescriptorHeapType { RTV, CBV_SRV_UAV, SAMPLER };
      DescriptorHeapType type;
      CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_handle;
      CD3DX12_GPU_DESCRIPTOR_HANDLE gpu_handle;
+     u32 descriptor_offset;
  };
 
  inline D3D12_DESCRIPTOR_HEAP_TYPE
@@ -776,7 +777,80 @@ struct RendererContext {
      IDxcUtils *dxc_utils;
      IDxcCompiler3 *dxc_compiler;
      Container::FixedArray<DescriptorHeap *, 3> descriptor_heaps;
- };
+     Container::FixedArray<u32, 3> descriptor_offset;
+};
 
+inline D3D12_RESOURCE_STATES ToDxResourceState(ResourceState state) {
+    switch (state) {
+    case Fract::RESOURCE_STATE_UNDEFINED:
+        break;
+    case Fract::RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER:
+        return D3D12_RESOURCE_STATES::
+            D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+        break;
+    case Fract::RESOURCE_STATE_INDEX_BUFFER:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_INDEX_BUFFER;
+        break;
+    case Fract::RESOURCE_STATE_RENDER_TARGET:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_RENDER_TARGET;
+        break;
+    case Fract::RESOURCE_STATE_UNORDERED_ACCESS:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        break;
+    case Fract::RESOURCE_STATE_DEPTH_WRITE:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_DEPTH_WRITE;
+        break;
+    case Fract::RESOURCE_STATE_DEPTH_READ:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_DEPTH_READ;
+        break;
+    case Fract::RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE:
+        return D3D12_RESOURCE_STATES::
+            D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        break;
+    case Fract::RESOURCE_STATE_PIXEL_SHADER_RESOURCE:
+        return D3D12_RESOURCE_STATES::
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        break;
+    case Fract::RESOURCE_STATE_SHADER_RESOURCE:
+        return D3D12_RESOURCE_STATES::
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        break;
+    case Fract::RESOURCE_STATE_STREAM_OUT:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_STREAM_OUT;
+        break;
+    case Fract::RESOURCE_STATE_INDIRECT_ARGUMENT:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+        break;
+    case Fract::RESOURCE_STATE_COPY_DEST:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST;
+        break;
+    case Fract::RESOURCE_STATE_COPY_SOURCE:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_SOURCE;
+        break;
+    case Fract::RESOURCE_STATE_GENERIC_READ:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_GENERIC_READ;
+        break;
+    case Fract::RESOURCE_STATE_PRESENT:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_PRESENT;
+        break;
+    case Fract::RESOURCE_STATE_COMMON:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON;
+        break;
+    case Fract::RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE:
+        return D3D12_RESOURCE_STATES::
+            D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+        break;
+    case Fract::RESOURCE_STATE_SHADING_RATE_SOURCE:
+        return D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE;
+        break;
+    case Fract::RESOURCE_STATE_HOST_READ:
+        break;
+    case Fract::RESOURCE_STATE_HOST_WRITE:
+        break;
+    default:
+        break;
+    }
+    assert(false); // some resorucestate is not supported
+}
 
  } // namespace Fract

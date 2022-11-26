@@ -47,12 +47,13 @@ class Texture {
 
   private:
     DescriptorTypes m_descriptor_types;
-    ResourceState m_state{};
+    ResourceState m_resource_state{};
     const TextureType m_type{};
     const TextureFormat m_format{};
 
     const u32 m_width{}, m_height{}, m_depth{};
     u32 mip_map_level{};
+    u32 array_layer;
     const u32 m_byte_per_pixel{};
 
     const RendererContext &m_context{};
